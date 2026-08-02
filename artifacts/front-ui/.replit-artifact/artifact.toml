@@ -1,0 +1,27 @@
+kind = "web"
+previewPath = "/"
+title = "Ascendiz Landing Page"
+version = "1.0.0"
+id = "artifacts/ascendiz"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 24954
+
+[services.development]
+run = "pnpm --filter @workspace/ascendiz run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/ascendiz", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/ascendiz/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "24954"
+BASE_PATH = "/"

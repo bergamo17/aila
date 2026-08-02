@@ -1,0 +1,88 @@
+Here's a structured requirements document for **Ascendiz**'s landing page, in English:
+
+## 1. Project Overview
+- **Company**: Ascendiz (software house)
+- **Goal**: Convert visitors into leads (project inquiries, consultations, hiring requests) and establish credibility as a professional software development company.
+- **Target audience**: Startups, SMEs, and enterprise clients looking to outsource software development (web, mobile, custom systems).
+
+## 2. Core Sections / Content Requirements
+
+**Header / Navigation**
+- Logo, company name
+- Nav links: Home, Services, Portfolio, About, Contact
+- CTA button (e.g., "Get a Free Consultation")
+
+**Hero Section**
+- Strong headline (value proposition, e.g., "We Build Software That Scales Your Business")
+- Supporting subheadline
+- Primary CTA button
+- Optional: hero illustration/image or short video
+
+**Services Section**
+- List of services offered (e.g., Web Development, Mobile App Development, Custom Software, UI/UX Design, DevOps/Cloud, QA/Testing)
+- Icons + short descriptions per service
+
+**Why Choose Us / Value Proposition**
+- Key differentiators (experience, tech stack, delivery speed, dedicated teams, etc.)
+- Trust indicators: years of experience, number of projects, client logos
+
+**Portfolio / Case Studies**
+- Showcase 3–6 featured projects with images, brief description, tech stack used
+- Link to full case study or portfolio page (optional)
+
+**Tech Stack Section**
+- Logos/icons of technologies used (e.g., React, Node.js, Flutter, AWS, etc.)
+
+**Process/Workflow**
+- Step-by-step of how Ascendiz works with clients (e.g., Discovery → Design → Development → Testing → Deployment → Support)
+
+**Testimonials**
+- Client quotes/reviews with name, company, photo (if available)
+
+**Team (optional)**
+- Brief intro to leadership or team, photos
+
+**Pricing/Engagement Models (optional)**
+- Fixed price, hourly, dedicated team models
+
+**Call-to-Action Section**
+- Reinforce CTA before footer (e.g., "Ready to Build Your Next Project?")
+- Contact form or "Book a Call" button
+
+**Footer**
+- Company info, address, contact details
+- Social media links
+- Quick links (Privacy Policy, Terms, Sitemap)
+- Newsletter signup (optional)
+
+## 3. Functional Requirements
+- Contact form with validation (name, email, message, project type)
+- Responsive design (mobile, tablet, desktop)
+- Fast loading time (optimized images, lazy loading)
+- SEO-friendly (meta tags, semantic HTML, sitemap)
+- Smooth scroll / anchor navigation
+- Analytics integration (Google Analytics / Meta Pixel)
+- WhatsApp/Live chat integration (optional, common in Indonesia-based businesses)
+
+## 4. Non-Functional Requirements
+- Cross-browser compatibility
+- Accessibility (WCAG basics)
+- Secure form submission (spam protection, e.g., reCAPTCHA)
+- Scalable/maintainable codebase if built custom (vs. using a website builder)
+
+## 5. Design Requirements
+- Modern, professional, tech-forward aesthetic
+- Consistent color palette & typography reflecting brand identity
+- High-quality visuals/illustrations
+- Clear visual hierarchy guiding users toward CTAs
+
+## 6. Tech Stack Suggestions (for the landing page itself)
+- Frontend: Next.js / React, or plain HTML-CSS-JS for simplicity
+- Styling: Tailwind CSS
+- Hosting: Vercel / Netlify
+- Form handling: Formspree, EmailJS, or custom backend endpoint
+- CMS (optional): Headless CMS if content needs frequent updates (e.g., Sanity, Contentful)
+
+---
+
+Mau saya bantu lanjutkan ke tahap berikutnya — misalnya bikin wireframe/mockup sederhana, atau langsung mulai coding landing page-nya (React/Next.js atau HTML-CSS)?

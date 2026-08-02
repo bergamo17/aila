@@ -1,0 +1,876 @@
+openapi: 3.1.0
+info:
+  # Do not change the title, if the title changes, the import paths will be broken
+  title: Api
+  version: 0.1.0
+  description: Sistem Akademik Mahasiswa API
+servers:
+  - url: /api
+    description: Base API path
+tags:
+  - name: health
+    description: Health operations
+  - name: mahasiswa
+    description: Student operations
+  - name: mata-kuliah
+    description: Course operations
+  - name: nilai
+    description: Grade operations
+  - name: dashboard
+    description: Dashboard and stats
+  - name: admin
+    description: Admin authentication operations
+
+paths:
+  /healthz:
+    get:
+      operationId: healthCheck
+      tags: [health]
+      summary: Health check
+      responses:
+        "200":
+          description: Healthy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthStatus"
+
+  /mahasiswa:
+    get:
+      operationId: listMahasiswa
+      tags: [mahasiswa]
+      summary: List all students
+      parameters:
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 20
+        - in: query
+          name: offset
+          schema:
+            type: integer
+            default: 0
+        - in: query
+          name: search
+          schema:
+            type: string
+      responses:
+        "200":
+          description: List of students
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MahasiswaListResponse"
+    post:
+      operationId: createMahasiswa
+      tags: [mahasiswa]
+      summary: Add a new student
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MahasiswaInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Mahasiswa"
+        "400":
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /mahasiswa/{id}:
+    get:
+      operationId: getMahasiswa
+      tags: [mahasiswa]
+      summary: Get student by ID
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Student found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Mahasiswa"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    put:
+      operationId: updateMahasiswa
+      tags: [mahasiswa]
+      summary: Update student
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MahasiswaUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Mahasiswa"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    delete:
+      operationId: deleteMahasiswa
+      tags: [mahasiswa]
+      summary: Delete student
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /mahasiswa/{id}/transkrip:
+    get:
+      operationId: getMahasiswaTranskrip
+      tags: [mahasiswa]
+      summary: Get full academic transcript for a student
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Transcript
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Transkrip"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /mata-kuliah:
+    get:
+      operationId: listMataKuliah
+      tags: [mata-kuliah]
+      summary: List all courses
+      parameters:
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 20
+        - in: query
+          name: offset
+          schema:
+            type: integer
+            default: 0
+      responses:
+        "200":
+          description: List of courses
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MataKuliahListResponse"
+    post:
+      operationId: createMataKuliah
+      tags: [mata-kuliah]
+      summary: Add a new course
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MataKuliahInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MataKuliah"
+        "400":
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /mata-kuliah/{id}:
+    get:
+      operationId: getMataKuliah
+      tags: [mata-kuliah]
+      summary: Get course by ID
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Course found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MataKuliah"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    put:
+      operationId: updateMataKuliah
+      tags: [mata-kuliah]
+      summary: Update course
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MataKuliahUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MataKuliah"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    delete:
+      operationId: deleteMataKuliah
+      tags: [mata-kuliah]
+      summary: Delete course
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /nilai:
+    get:
+      operationId: listNilai
+      tags: [nilai]
+      summary: List grades, optionally filtered by student
+      parameters:
+        - in: query
+          name: mahasiswa_id
+          schema:
+            type: integer
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 50
+        - in: query
+          name: offset
+          schema:
+            type: integer
+            default: 0
+      responses:
+        "200":
+          description: List of grades
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NilaiListResponse"
+    post:
+      operationId: createNilai
+      tags: [nilai]
+      summary: Add a grade
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/NilaiInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NilaiDetail"
+        "400":
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /nilai/{id}:
+    put:
+      operationId: updateNilai
+      tags: [nilai]
+      summary: Update a grade
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/NilaiUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NilaiDetail"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    delete:
+      operationId: deleteNilai
+      tags: [nilai]
+      summary: Delete a grade
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /dashboard/stats:
+    get:
+      operationId: getDashboardStats
+      tags: [dashboard]
+      summary: Get dashboard summary stats
+      responses:
+        "200":
+          description: Dashboard statistics
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DashboardStats"
+
+  /admin/register:
+    post:
+      operationId: registerAdmin
+      tags: [admin]
+      summary: Register a new admin
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AdminRegisterInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Admin"
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          description: Email already registered
+          content:
+            application/json:
+                schema:
+                  $ref: "#/components/schemas/ErrorResponse"
+
+  /admin/login:
+    post:
+      operationId: loginAdmin
+      tags: [admin]
+      summary: Log in as Admin
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AdminLoginInput"
+      responses:
+        "200":
+          description: Logged in
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Admin"
+        "401":
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /admin/logout:
+    post:
+      operationId: logoutAdmin
+      tags: [admin]
+      summary: Log out current Admin
+      responses:
+        "200":
+          description: Logged out
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/logoutResponse"
+
+  /admin/me:
+    get:
+      operationId: getAdminMe
+      tags: [admin]
+      summary: Get currently logged in admin
+      responses:
+        "200": 
+          description: Current admin
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Admin"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+components:
+  schemas:
+    HealthStatus:
+      type: object
+      properties:
+        status:
+          type: string
+      required:
+        - status
+
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+      required:
+        - error
+
+    Mahasiswa:
+      type: object
+      properties:
+        id:
+          type: integer
+        nim:
+          type: string
+        nama:
+          type: string
+        jurusan:
+          type: string
+        angkatan:
+          type: integer
+        email:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - nim
+        - nama
+        - jurusan
+        - angkatan
+        - createdAt
+        - updatedAt
+
+    MahasiswaInput:
+      type: object
+      properties:
+        nim:
+          type: string
+          minLength: 1
+        nama:
+          type: string
+          minLength: 1
+        jurusan:
+          type: string
+          minLength: 1
+        angkatan:
+          type: integer
+        email:
+          type: ["string", "null"]
+          pattern: "^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$"
+      required:
+        - nim
+        - nama
+        - jurusan
+        - angkatan
+
+    MahasiswaUpdate:
+      type: object
+      properties:
+        nama:
+          type: string
+          minLength: 1
+        jurusan:
+          type: string
+          minLength: 1
+        angkatan:
+          type: integer
+        email:
+          type: ["string", "null"]
+          pattern: "^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$"
+
+    MahasiswaListResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/Mahasiswa"
+        total:
+          type: integer
+      required:
+        - data
+        - total
+
+    MataKuliah:
+      type: object
+      properties:
+        id:
+          type: integer
+        kodeMk:
+          type: string
+        namaMk:
+          type: string
+        sks:
+          type: integer
+        dosenPengampu:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - kodeMk
+        - namaMk
+        - sks
+        - createdAt
+
+    MataKuliahInput:
+      type: object
+      properties:
+        kodeMk:
+          type: string
+          minLength: 1
+        namaMk:
+          type: string
+          minLength: 1
+        sks:
+          type: integer
+          minimum: 1
+        dosenPengampu:
+          type: ["string", "null"]
+      required:
+        - kodeMk
+        - namaMk
+        - sks
+
+    MataKuliahUpdate:
+      type: object
+      properties:
+        namaMk:
+          type: string
+          minLength: 1
+        sks:
+          type: integer
+          minimum: 1
+        dosenPengampu:
+          type: ["string", "null"]
+
+    MataKuliahListResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/MataKuliah"
+        total:
+          type: integer
+      required:
+        - data
+        - total
+
+    NilaiDetail:
+      type: object
+      properties:
+        id:
+          type: integer
+        mahasiswaId:
+          type: integer
+        mataKuliahId:
+          type: integer
+        nilaiHuruf:
+          type: string
+        semester:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        mahasiswa:
+          $ref: "#/components/schemas/Mahasiswa"
+        mataKuliah:
+          $ref: "#/components/schemas/MataKuliah"
+      required:
+        - id
+        - mahasiswaId
+        - mataKuliahId
+        - nilaiHuruf
+        - semester
+        - createdAt
+        - updatedAt
+        - mahasiswa
+        - mataKuliah
+
+    NilaiInput:
+      type: object
+      properties:
+        mahasiswaId:
+          type: integer
+        mataKuliahId:
+          type: integer
+        nilaiHuruf:
+          type: string
+          minLength: 1
+        semester:
+          type: string
+          minLength: 1
+      required:
+        - mahasiswaId
+        - mataKuliahId
+        - nilaiHuruf
+        - semester
+
+    NilaiUpdate:
+      type: object
+      properties:
+        nilaiHuruf:
+          type: string
+          minLength: 1
+        semester:
+          type: string
+          minLength: 1
+
+    NilaiListResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/NilaiDetail"
+        total:
+          type: integer
+      required:
+        - data
+        - total
+
+    TranskripItem:
+      type: object
+      properties:
+        nilaiId:
+          type: integer
+        mataKuliah:
+          $ref: "#/components/schemas/MataKuliah"
+        nilaiHuruf:
+          type: string
+        semester:
+          type: string
+        bobotNilai:
+          type: number
+      required:
+        - nilaiId
+        - mataKuliah
+        - nilaiHuruf
+        - semester
+        - bobotNilai
+
+    Transkrip:
+      type: object
+      properties:
+        mahasiswa:
+          $ref: "#/components/schemas/Mahasiswa"
+        nilai:
+          type: array
+          items:
+            $ref: "#/components/schemas/TranskripItem"
+        totalSks:
+          type: integer
+        ipk:
+          type: number
+      required:
+        - mahasiswa
+        - nilai
+        - totalSks
+        - ipk
+
+    DashboardStats:
+      type: object
+      properties:
+        totalMahasiswa:
+          type: integer
+        totalMataKuliah:
+          type: integer
+        totalNilai:
+          type: integer
+        distribusiNilai:
+          type: array
+          items:
+            $ref: "#/components/schemas/NilaiDistribusi"
+        mahasiswaTerbaru:
+          type: array
+          items:
+            $ref: "#/components/schemas/Mahasiswa"
+      required:
+        - totalMahasiswa
+        - totalMataKuliah
+        - totalNilai
+        - distribusiNilai
+        - mahasiswaTerbaru
+
+    NilaiDistribusi:
+      type: object
+      properties:
+        nilaiHuruf:
+          type: string
+        jumlah:
+          type: integer
+      required:
+        - nilaiHuruf
+        - jumlah
+
+    Admin:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        email:
+          type: string
+        nama:
+          type: string
+      required:
+        - id 
+        - email
+        - nama
+
+    AdminLoginInput:
+      type: object
+      properties:
+        email:
+          type: ["string", "null"]
+          pattern: "^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$"
+        password:
+          type: string
+          minLength: 8
+      required:
+        - email
+        - password
+
+    AdminRegisterInput:
+      type: object
+      properties:
+        email:
+          type: ["string", "null"]
+          pattern: "^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$"
+        password:
+          type: string
+          minLength: 8
+        nama:
+          type: string
+          minLength: 1
+      required:
+        - email
+        - password
+        - nama
+
+    logoutResponse:
+      type: object
+      properties:
+        ok:
+          type: boolean
+      required:
+        - ok

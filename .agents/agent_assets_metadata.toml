@@ -1,0 +1,8 @@
+uploads = []
+generated = []
+
+[[outputs]]
+id = "QAAwtVaO7I0i-mBCANwe2"
+uri = "file://sistem-akademik-dev.zip"
+type = "unspecified"
+title = "Sistem Akademik — Development Source Code"

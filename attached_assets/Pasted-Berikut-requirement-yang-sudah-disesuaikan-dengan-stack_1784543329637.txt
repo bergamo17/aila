@@ -1,0 +1,171 @@
+Berikut requirement yang sudah disesuaikan dengan stack **React (frontend) + Go (backend) + PostgreSQL (database) + sqlc (query generator)** — mirip pola yang kamu pakai di project Simple Bank:
+
+## 1. Overview
+- **Nama aplikasi**: Sistem Akademik Mahasiswa (Simple)
+- **Tujuan**: CRUD data mahasiswa, mata kuliah, dan nilai dengan database PostgreSQL
+- **Stack**: React (frontend) — Go + sqlc (backend) — PostgreSQL (database)
+
+## 2. Database Schema (PostgreSQL)
+
+```sql
+-- migration: 000001_init_schema.up.sql
+
+CREATE TABLE mahasiswa (
+    id BIGSERIAL PRIMARY KEY,
+    nim VARCHAR(20) UNIQUE NOT NULL,
+    nama VARCHAR(255) NOT NULL,
+    jurusan VARCHAR(100) NOT NULL,
+    angkatan INT NOT NULL,
+    email VARCHAR(255),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE TABLE mata_kuliah (
+    id BIGSERIAL PRIMARY KEY,
+    kode_mk VARCHAR(20) UNIQUE NOT NULL,
+    nama_mk VARCHAR(255) NOT NULL,
+    sks INT NOT NULL,
+    dosen_pengampu VARCHAR(255),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE TABLE nilai (
+    id BIGSERIAL PRIMARY KEY,
+    mahasiswa_id BIGINT NOT NULL REFERENCES mahasiswa(id) ON DELETE CASCADE,
+    mata_kuliah_id BIGINT NOT NULL REFERENCES mata_kuliah(id) ON DELETE CASCADE,
+    nilai_huruf VARCHAR(2) NOT NULL,
+    semester VARCHAR(50) NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    UNIQUE (mahasiswa_id, mata_kuliah_id, semester)
+);
+```
+
+> Catatan: `email` dan `dosen_pengampu` sengaja nullable (pakai `pgtype.Text` nanti di sqlc), sisanya `NOT NULL` — sesuai pola yang biasa kamu handle di Simple Bank soal `pgtype.Text` vs `string`.
+
+## 3. sqlc Queries (contoh untuk modul `mahasiswa`)
+
+```sql
+-- name: CreateMahasiswa :one
+INSERT INTO mahasiswa (nim, nama, jurusan, angkatan, email)
+VALUES ($1, $2, $3, $4, $5)
+RETURNING *;
+
+-- name: GetMahasiswa :one
+SELECT * FROM mahasiswa WHERE id = $1 LIMIT 1;
+
+-- name: ListMahasiswa :many
+SELECT * FROM mahasiswa ORDER BY id LIMIT $1 OFFSET $2;
+
+-- name: UpdateMahasiswa :one
+UPDATE mahasiswa
+SET nama = $2, jurusan = $3, angkatan = $4, email = $5, updated_at = now()
+WHERE id = $1
+RETURNING *;
+
+-- name: DeleteMahasiswa :exec
+DELETE FROM mahasiswa WHERE id = $1;
+```
+
+Pola query yang sama (`Create`, `Get`, `List`, `Update`, `Delete`) diterapkan juga untuk `mata_kuliah` dan `nilai`.
+
+## 4. sqlc Configuration
+
+```yaml
+# sqlc.yaml
+version: "2"
+sql:
+  - engine: "postgresql"
+    queries: "db/query"
+    schema: "db/migration"
+    gen:
+      go:
+        package: "db"
+        out: "db/sqlc"
+        sql_package: "pgx/v5"
+        emit_json_tags: true
+        emit_interface: true
+```
+
+## 5. Backend API Endpoints (Go)
+
+| Method | Endpoint | Deskripsi |
+|---|---|---|
+| POST | `/api/mahasiswa` | Tambah mahasiswa |
+| GET | `/api/mahasiswa` | List semua mahasiswa (support `?limit=&offset=`) |
+| GET | `/api/mahasiswa/:id` | Detail satu mahasiswa |
+| PUT | `/api/mahasiswa/:id` | Update mahasiswa |
+| DELETE | `/api/mahasiswa/:id` | Hapus mahasiswa |
+| POST | `/api/mata-kuliah` | Tambah mata kuliah |
+| GET | `/api/mata-kuliah` | List mata kuliah |
+| GET | `/api/mata-kuliah/:id` | Detail mata kuliah |
+| PUT | `/api/mata-kuliah/:id` | Update mata kuliah |
+| DELETE | `/api/mata-kuliah/:id` | Hapus mata kuliah |
+| POST | `/api/nilai` | Input nilai |
+| GET | `/api/nilai?mahasiswa_id=` | List nilai per mahasiswa |
+| PUT | `/api/nilai/:id` | Update nilai |
+| DELETE | `/api/nilai/:id` | Hapus nilai |
+
+## 6. Backend Project Structure (Go)
+
+```
+academic-system/
+├── db/
+│   ├── migration/        # golang-migrate SQL files
+│   ├── query/             # raw SQL untuk sqlc
+│   └── sqlc/               # generated code dari sqlc
+├── api/
+│   ├── server.go
+│   ├── mahasiswa.go       # handler CRUD mahasiswa
+│   ├── mata_kuliah.go
+│   └── nilai.go
+├── util/
+│   └── config.go          # load env (DB_SOURCE, dll)
+├── main.go
+└── sqlc.yaml
+```
+
+Rekomendasi router: **Gin** atau **chi** (lebih ringan dibanding gRPC/protobuf yang kamu pakai di Simple Bank — untuk project ini plain REST JSON sudah cukup, tidak perlu grpc-gateway).
+
+## 7. Frontend Structure (React)
+
+```
+academic-frontend/
+├── src/
+│   ├── api/
+│   │   └── client.js       # axios/fetch wrapper ke backend
+│   ├── pages/
+│   │   ├── MahasiswaList.jsx
+│   │   ├── MahasiswaForm.jsx
+│   │   ├── MataKuliahList.jsx
+│   │   ├── MataKuliahForm.jsx
+│   │   └── NilaiList.jsx
+│   ├── components/
+│   │   ├── Table.jsx
+│   │   ├── Modal.jsx
+│   │   └── ConfirmDialog.jsx
+│   └── App.jsx
+```
+
+- Gunakan **fetch/axios** ke REST endpoint di atas
+- State management cukup `useState`/`useEffect` (tidak perlu Redux untuk skala sederhana ini)
+- Form validation sederhana di sisi client sebelum submit ke API
+
+## 8. Functional Requirements
+- Semua operasi CRUD tersimpan permanen ke PostgreSQL lewat sqlc-generated queries
+- Response API dalam format JSON, dengan status code yang sesuai (200, 201, 400, 404, 500)
+- Validasi input di level backend (Go struct binding + validator) sebelum masuk ke query
+- Frontend menampilkan notifikasi sukses/error berdasarkan response API
+
+## 9. Non-Functional Requirements
+- Koneksi database pakai connection pool (`pgxpool`)
+- Environment variable untuk `DB_SOURCE`, `SERVER_ADDRESS` (pola sama seperti `app.env` di Simple Bank)
+- Migration dikelola pakai `golang-migrate` (up/down migration terpisah)
+
+## 10. Contoh Alur Testing (opsional)
+- Gunakan `sqlc`-generated `Querier` interface untuk mock testing di layer handler (sama seperti testify pattern yang kamu pakai sebelumnya)
+
+---
+
+Mau saya bantu generate langsung starter code-nya (schema migration + query.sql + sqlc.yaml + skeleton handler Go), atau cukup requirement ini dulu sebagai dasar sebelum kamu mulai coding sendiri?
