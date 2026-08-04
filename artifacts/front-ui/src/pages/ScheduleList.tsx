@@ -133,16 +133,17 @@ export default function ScheduleList() {
     const meta = TYPE_META[e.type];
     const Icon = meta.icon;
     return (
-      <Card key={e.id} className="p-4 hover-elevate transition-all">
-        <div className="flex items-start gap-3">
+      <Card key={e.id} className="p-2.5 hover-elevate transition-all">
+        <div className="flex items-start gap-2.5">
           <Checkbox
             checked={e.status === 'completed'}
             onCheckedChange={() => toggleStatus(e.id, e.status)}
-            className="mt-1"
+            //className="mt-1"
           />
           <div
             className="w-8 h-8 rounded-md flex items-center justify-center shrink-0"
             style={{ backgroundColor: `${meta.color}20`, color: meta.color }}
+            title={meta.label}
           >
             <Icon className="w-4 h-4" />
           </div>
@@ -150,13 +151,12 @@ export default function ScheduleList() {
             <p className={`font-medium truncate ${e.status === 'completed' ? 'line-through text-muted-foreground' : ''}`}>
               {e.title}
             </p>
-            <div className="flex items-center gap-2 mt-1 flex-wrap">
-              <Badge variant="outline" className="text-xs font-normal">{meta.label}</Badge>
+            <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
               {e.subjectId && subjectName(e.subjectId) && (
-                <Badge variant="secondary" className="text-xs font-normal">{subjectName(e.subjectId)}</Badge>
+                <Badge variant="secondary" className="text-[10px] font-normal">{subjectName(e.subjectId)}</Badge>
               )}
               {(e.startTime || e.endTime) && (
-                <span className="text-xs text-muted-foreground font-mono">
+                <span className="text-[10px] text-muted-foreground font-mono">
                   {e.startTime}{e.endTime ? ` - ${e.endTime}` : ''}
                 </span>
               )}
@@ -164,8 +164,8 @@ export default function ScheduleList() {
           </div>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0">
-                <MoreHorizontal className="h-4 w-4" />
+              <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0">
+                <MoreHorizontal className="h-3.5 w-3.5" />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
@@ -206,14 +206,15 @@ export default function ScheduleList() {
         </TabsList>
 
         <TabsContent value="calendar" className="mt-4">
-          <div className="grid grid-cols-1 lg:grid-cols-[auto_1fr] gap-6">
-            <Card className="p-3 w-fit">
+          <div className="grid grid-cols-1 lg:grid-cols-[400px_1fr] gap-8 items-start">
+            <Card className="p-6">
               <Calendar
                 mode="single"
                 selected={selectedDate}
                 onSelect={(d) => d && setSelectedDate(d)}
                 modifiers={{ hasEvent: (d) => eventDates.has(format(d, 'yyyy-MM-dd')) }}
                 modifiersClassNames={{ hasEvent: 'font-bold text-primary underline underline-offset-4' }}
+                className="w-full [--cell-size:3.5rem]"
               />
             </Card>
 
@@ -228,7 +229,7 @@ export default function ScheduleList() {
                 </Button>
               </div>
               {eventsOnSelectedDate.length === 0 ? (
-                <Card className="p-8 text-center text-muted-foreground text-sm">
+                <Card className="p-6 text-center text-muted-foreground text-sm">
                   Tidak ada jadwal di tanggal ini.
                 </Card>
               ) : (
