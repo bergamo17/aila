@@ -5,7 +5,8 @@ import {
   Users, 
   BookOpen, 
   GraduationCap,
-  NotebookText
+  NotebookText,
+  ListTodo
 } from 'lucide-react';
 import { FEATURE_FLAGS } from '@/config/featureFlags';
 import { CalendarDays } from 'lucide-react';
@@ -14,6 +15,7 @@ const navigation = [
   { name: 'Dashboard', href: '/', icon: LayoutDashboard },
   { name: 'My Workspace', href: '/workspace', icon: NotebookText },
   { name: 'Schedule', href: '/schedule', icon: CalendarDays },
+  { name: 'Task', href:'/tasks', icon: ListTodo },
   { name: 'Mahasiswa', href: '/mahasiswa', icon: Users, flag: 'ENABLE_MAHASISWA_MENU' as const },
   { name: 'Mata Kuliah', href: '/mata-kuliah', icon: BookOpen, flag: 'ENABLE_MATA_KULIAH_MENU' as const },
   { name: 'Nilai', href: '/nilai', icon: GraduationCap, flag: 'ENABLE_NILAI_MENU' as const },

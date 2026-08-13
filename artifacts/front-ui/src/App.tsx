@@ -4,6 +4,7 @@ import { TooltipProvider } from '@/components/ui/tooltip';
 import { Route, Switch, Router as WouterRouter } from 'wouter';
 import { WorkspaceProvider } from "@/lib/workspace-store";
 import { ScheduleProvider } from "@/lib/schedule-store";
+import { TaskBoardProvider } from './lib/task-board-store';
 import { FEATURE_FLAGS } from "@/config/featureFlags";
 import { AppLayout } from '@/components/layout/AppLayout';
 import { RequireAuth } from '@/components/auth/RequireAuth';
@@ -12,6 +13,7 @@ import Dashboard from '@/pages/Dashboard';
 import WorkspaceList from "@/pages/WorkspaceList";
 import SubjectDetails from "@/pages/SubjectDetails";
 import ScheduleList from "@/pages/ScheduleList";
+import TaskBoard from './pages/TaskBoard';
 import MahasiswaList from '@/pages/MahasiswaList';
 import MahasiswaTranskrip from '@/pages/MahasiswaTranskrip';
 import MataKuliahList from '@/pages/MataKuliahList';
@@ -32,7 +34,8 @@ function ProtectedApp() {
     //<RequireAuth>
     <WorkspaceProvider>
       <ScheduleProvider>
-        <AppLayout>
+        <TaskBoardProvider>
+          <AppLayout>
           <Switch>
             <Route path="/" component={Dashboard} />
             <Route path="/workspace" component={WorkspaceList} />
@@ -44,11 +47,13 @@ function ProtectedApp() {
                 <Route path="/mahasiswa/:id/transkrip" component={MahasiswaTranskrip} />  
               </>
             )}
+            <Route path="/tasks" component={TaskBoard} />
             <Route path="/mata-kuliah" component={MataKuliahList} />
             <Route path="/nilai" component={NilaiList} />
             <Route component={NotFound} />
           </Switch>
-        </AppLayout>
+          </AppLayout>
+        </TaskBoardProvider>
       </ScheduleProvider>
     </WorkspaceProvider>
     //</RequireAuth>
