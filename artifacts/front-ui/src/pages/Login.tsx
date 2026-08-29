@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { GraduationCap, Eye, EyeOff } from "lucide-react";
+import logoAila from "@/assets/logo_a_blue.png";
 
 export default function Login() {
     const [, navigate] = useLocation();
@@ -37,11 +38,15 @@ export default function Login() {
       <Card className="w-full max-w-sm overflow-hidden rounded-2xl border-0 py-0 shadow-xl">
         {/* Gradient header — hanya di dalam card */}
         <div className="relative bg-gradient-to-br from-blue-600 to-blue-800 px-6 pt-10 pb-14 text-center text-white">
-          <GraduationCap className="mx-auto h-12 w-12" strokeWidth={1.5} />
+          <img
+            src={logoAila}
+            alt="AILA"
+            className="mx-auto h-16 w-16"
+          />
           <h1 className="mt-4 text-xl font-semibold tracking-tight">
-            Sistem Akademik
+            AILA
           </h1>
-          <p className="mt-1 text-sm text-white/80">Portal khusus admin</p>
+          <p className="mt-1 text-sm text-white/80">Your Study Workspace</p>
 
           <svg
             viewBox="0 0 400 40"
@@ -61,7 +66,7 @@ export default function Login() {
               <Input
                 id="email"
                 type="email"
-                placeholder="admin@sistemakademik.id"
+                placeholder="your@email.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 autoComplete="username"
