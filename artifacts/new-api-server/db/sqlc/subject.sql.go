@@ -36,6 +36,25 @@ func (q *Queries) CreateSubject(ctx context.Context, arg CreateSubjectParams) (S
 	return i, err
 }
 
+const getSubjectById = `-- name: GetSubjectById :one
+SELECT id, user_id, subject_name, created_at
+FROM subjects
+WHERE id = $1
+LIMIT 1
+`
+
+func (q *Queries) GetSubjectById(ctx context.Context, id int64) (Subject, error) {
+	row := q.db.QueryRow(ctx, getSubjectById, id)
+	var i Subject
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.SubjectName,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
 const listSubjectByUser = `-- name: ListSubjectByUser :many
 SELECT s.id, s.user_id, s.subject_name, s.created_at, COUNT(n.id) AS notes_count
 FROM subjects AS s

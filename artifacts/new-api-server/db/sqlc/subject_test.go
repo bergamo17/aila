@@ -32,6 +32,18 @@ func TestCreateSubject(t *testing.T) {
 	createRandomSubject(t)
 }
 
+func TestGetSubjectById(t *testing.T) {
+	subject := createRandomSubject(t)
+
+	result, err := testQueries.GetSubjectById(context.Background(), subject.ID)
+	require.NoError(t, err)
+	require.NotEmpty(t, result)
+	require.Equal(t, subject.ID, result.ID)
+	require.Equal(t, subject.SubjectName, result.SubjectName)
+	require.Equal(t, subject.UserID, result.UserID)
+	// require.WithinDuration(t, subject.CreatedAt.Time, result.CreatedAt.Time, time.Second)
+}
+
 func TestListSubjectByUser(t *testing.T) {
 	user := createRandomUser(t)
 	otherUser := createRandomUser(t)

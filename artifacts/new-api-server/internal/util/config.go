@@ -7,9 +7,11 @@ import (
 )
 
 type Config struct {
-	DBSource            string        `mapstructure:"DB_URL"`
-	TokenSymetrciKey    string        `mapstructure:"TOKEN_SYMETRIC_KEY"`
-	AccessTokenDuration time.Duration `mapstructure:"ACCESS_TOKEN_DURATION"`
+	DBSource             string        `mapstructure:"DB_URL"`
+	TokenSymetricKey     string        `mapstructure:"TOKEN_SYMETRIC_KEY"`
+	AccessTokenDuration  time.Duration `mapstructure:"ACCESS_TOKEN_DURATION"`
+	RefreshTokenDuration time.Duration `mapstructure:"REFRESH_TOKEN_DURATION"`
+	HttpServerAddress    string        `mapstructure:"HTTP_SERVER_ADDRES"`
 }
 
 func LoadConfigPath(path string) (config Config, err error) {

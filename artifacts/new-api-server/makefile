@@ -26,6 +26,9 @@ psql:
 	docker exec -it aila-db psql -U aila -d aila_db
 
 server: 
-	go run main.go
+	go run cmd/server/main.go
 
-.PHONY: postgress createdb dropdb migrateup migratedown sqlc test psql server
+mock:
+	mockgen -source=db/sqlc/store.go -aux_files=github.com/bergamo17/aila/db/sqlc=db/sqlc/querier.go -destination=db/mock/store.go -package=mockdb
+
+.PHONY: postgress createdb dropdb migrateup migratedown sqlc test psql server mock

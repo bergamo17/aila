@@ -6,16 +6,21 @@ package db
 
 import (
 	"context"
+
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 type Querier interface {
 	CreateNote(ctx context.Context, arg CreateNoteParams) (Note, error)
+	CreateSession(ctx context.Context, arg CreateSessionParams) (Session, error)
 	CreateSubject(ctx context.Context, arg CreateSubjectParams) (Subject, error)
 	CreateTask(ctx context.Context, arg CreateTaskParams) (Task, error)
 	CreateUser(ctx context.Context, arg CreateUserParams) (User, error)
 	DeleteNote(ctx context.Context, arg DeleteNoteParams) error
 	DeleteTask(ctx context.Context, arg DeleteTaskParams) error
 	GetNote(ctx context.Context, arg GetNoteParams) (Note, error)
+	GetSession(ctx context.Context, id pgtype.UUID) (Session, error)
+	GetSubjectById(ctx context.Context, id int64) (Subject, error)
 	GetTask(ctx context.Context, arg GetTaskParams) (Task, error)
 	GetUser(ctx context.Context, username string) (User, error)
 	GetUserByEmail(ctx context.Context, email string) (User, error)
