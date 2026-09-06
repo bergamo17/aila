@@ -1,8 +1,8 @@
 -- name: CreateNote :one
 INSERT INTO notes (
-    subject_id, content
+    subject_id, title, content
 ) VALUES (
-    $1, $2
+    $1, $2, $3
 ) RETURNING *;
 
 -- name: GetNote :one

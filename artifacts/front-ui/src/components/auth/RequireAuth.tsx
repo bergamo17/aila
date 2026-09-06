@@ -1,21 +1,25 @@
-import { type ReactNode, useEffect } from "react";
+import type { ReactNode } from "react";
 import { useLocation } from "wouter";
-import { useGetAdminMe } from "@workspace/api-client-react";
+import { useQuery } from "@tanstack/react-query";
+import { userApi } from "@/api/user";
 import { Spinner } from "@/components/ui/spinner";
+import { useAuthStore } from "@/lib/auth-store";
 
-export function RequireAuth({ children}: { children: ReactNode }) {
-    const [, navigate] = useLocation()
-    const { data: admin, isLoading, isError } = useGetAdminMe({
-        query: {
-            retry: false,
-        },
+export function ProtectedRoute({ children }: { children: ReactNode }) {
+    const [, navigate] = useLocation();
+    const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+
+    const { data: user, isLoading, isError } = useQuery ({
+        queryKey: ["me"],
+        queryFn: userApi.getMe,
+        enabled: isAuthenticated,
+        retry: false,
     });
 
-    useEffect(() => {
-        if (!isLoading && (isError || !admin)) {
-            navigate("/login");
-        }
-    }, [isLoading, isError, admin, navigate]);
+    if (!isAuthenticated) {
+        navigate("/login");
+        return null;
+    }
 
     if (isLoading) {
         return (
@@ -24,10 +28,11 @@ export function RequireAuth({ children}: { children: ReactNode }) {
             </div>
         );
     }
-    
-    if (isError || !admin) {
+
+    if (isError || !user) {
+        navigate("/login");
         return null;
     }
 
-    return <>{children}</>
+    return <>{children}</>;
 }

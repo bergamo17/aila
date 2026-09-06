@@ -7,8 +7,9 @@ import { ScheduleProvider } from "@/lib/schedule-store";
 import { TaskBoardProvider } from './lib/task-board-store';
 import { FEATURE_FLAGS } from "@/config/featureFlags";
 import { AppLayout } from '@/components/layout/AppLayout';
-import { RequireAuth } from '@/components/auth/RequireAuth';
+import { ProtectedRoute } from '@/components/auth/RequireAuth';
 import Login from '@/pages/Login';
+import Register from './pages/Register';
 import Dashboard from '@/pages/Dashboard';
 import WorkspaceList from "@/pages/WorkspaceList";
 import SubjectDetails from "@/pages/SubjectDetails";
@@ -31,40 +32,41 @@ const queryClient = new QueryClient({
 
 function ProtectedApp() {
   return (
-    //<RequireAuth>
-    <WorkspaceProvider>
-      <ScheduleProvider>
-        <TaskBoardProvider>
-          <AppLayout>
-          <Switch>
-            <Route path="/" component={Dashboard} />
-            <Route path="/workspace" component={WorkspaceList} />
-            <Route path="/workspace/:id" component={SubjectDetails} />
-            <Route path="/schedule" component={ScheduleList} />
-            {FEATURE_FLAGS.ENABLE_MAHASISWA_MENU && (
-              <>
-                <Route path="/mahasiswa" component={MahasiswaList} />
-                <Route path="/mahasiswa/:id/transkrip" component={MahasiswaTranskrip} />  
-              </>
-            )}
-            <Route path="/tasks" component={TaskBoard} />
-            <Route path="/mata-kuliah" component={MataKuliahList} />
-            <Route path="/nilai" component={NilaiList} />
-            <Route component={NotFound} />
-          </Switch>
-          </AppLayout>
-        </TaskBoardProvider>
-      </ScheduleProvider>
-    </WorkspaceProvider>
-    //</RequireAuth>
+    <ProtectedRoute>
+      <WorkspaceProvider>
+        <ScheduleProvider>
+          <TaskBoardProvider>
+            <AppLayout>
+              <Switch>
+                <Route path="/" component={Dashboard} />
+                <Route path="/workspace" component={WorkspaceList} />
+                <Route path="/workspace/:id" component={SubjectDetails} />
+                <Route path="/schedule" component={ScheduleList} />
+                {FEATURE_FLAGS.ENABLE_MAHASISWA_MENU && (
+                  <>
+                    <Route path="/mahasiswa" component={MahasiswaList} />
+                    <Route path="/mahasiswa/:id/transkrip" component={MahasiswaTranskrip} />
+                  </>
+                )}
+                <Route path="/tasks" component={TaskBoard} />
+                <Route path="/mata-kuliah" component={MataKuliahList} />
+                <Route path="/nilai" component={NilaiList} />
+                <Route component={NotFound} />
+              </Switch>
+            </AppLayout>
+          </TaskBoardProvider>
+        </ScheduleProvider>
+      </WorkspaceProvider>
+    </ProtectedRoute>
   );
 }
 
 function Router() {
   return (
     <Switch>
-      {/* Login berdiri sendiri, di luar AppLayout & RequireAuth */}
+      {/* Login berdiri sendiri, di luar AppLayout & ProtectedRoute */}
       <Route path="/login" component={Login} />
+      <Route path="/register" component={Register} />
       {/* Semua route lain wajib login, dibungkus AppLayout */}
       <Route>
         <ProtectedApp />

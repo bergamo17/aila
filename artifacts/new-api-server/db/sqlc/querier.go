@@ -11,6 +11,7 @@ import (
 )
 
 type Querier interface {
+	BlockSession(ctx context.Context, id pgtype.UUID) error
 	CreateNote(ctx context.Context, arg CreateNoteParams) (Note, error)
 	CreateSession(ctx context.Context, arg CreateSessionParams) (Session, error)
 	CreateSubject(ctx context.Context, arg CreateSubjectParams) (Subject, error)

@@ -14,6 +14,7 @@ type Note struct {
 	Content   pgtype.Text        `json:"content"`
 	CreatedAt pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt pgtype.Timestamptz `json:"updated_at"`
+	Title     string             `json:"title"`
 }
 
 type NoteAttachment struct {

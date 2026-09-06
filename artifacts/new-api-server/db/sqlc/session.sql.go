@@ -11,6 +11,17 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const blockSession = `-- name: BlockSession :exec
+UPDATE sessions
+SET is_blocked = true
+WHERE id = $1
+`
+
+func (q *Queries) BlockSession(ctx context.Context, id pgtype.UUID) error {
+	_, err := q.db.Exec(ctx, blockSession, id)
+	return err
+}
+
 const createSession = `-- name: CreateSession :one
 INSERT INTO sessions (
     id,

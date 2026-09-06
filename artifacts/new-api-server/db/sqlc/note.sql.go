@@ -13,19 +13,20 @@ import (
 
 const createNote = `-- name: CreateNote :one
 INSERT INTO notes (
-    subject_id, content
+    subject_id, title, content
 ) VALUES (
-    $1, $2
-) RETURNING id, subject_id, content, created_at, updated_at
+    $1, $2, $3
+) RETURNING id, subject_id, content, created_at, updated_at, title
 `
 
 type CreateNoteParams struct {
 	SubjectID int64       `json:"subject_id"`
+	Title     string      `json:"title"`
 	Content   pgtype.Text `json:"content"`
 }
 
 func (q *Queries) CreateNote(ctx context.Context, arg CreateNoteParams) (Note, error) {
-	row := q.db.QueryRow(ctx, createNote, arg.SubjectID, arg.Content)
+	row := q.db.QueryRow(ctx, createNote, arg.SubjectID, arg.Title, arg.Content)
 	var i Note
 	err := row.Scan(
 		&i.ID,
@@ -33,6 +34,7 @@ func (q *Queries) CreateNote(ctx context.Context, arg CreateNoteParams) (Note, e
 		&i.Content,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.Title,
 	)
 	return i, err
 }
@@ -56,7 +58,7 @@ func (q *Queries) DeleteNote(ctx context.Context, arg DeleteNoteParams) error {
 }
 
 const getNote = `-- name: GetNote :one
-SELECT n.id, n.subject_id, n.content, n.created_at, n.updated_at 
+SELECT n.id, n.subject_id, n.content, n.created_at, n.updated_at, n.title 
 FROM notes n
 JOIN subjects s ON s.id = n.subject_id
 WHERE n.id = $1 AND s.user_id = $2 
@@ -77,12 +79,13 @@ func (q *Queries) GetNote(ctx context.Context, arg GetNoteParams) (Note, error) 
 		&i.Content,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.Title,
 	)
 	return i, err
 }
 
 const listNotesBySubject = `-- name: ListNotesBySubject :many
-SELECT n.id, n.subject_id, n.content, n.created_at, n.updated_at
+SELECT n.id, n.subject_id, n.content, n.created_at, n.updated_at, n.title
 FROM notes n
 JOIN subjects s ON s.id = n.subject_id
 WHERE n.subject_id = $1 AND s.user_id = $2
@@ -109,6 +112,7 @@ func (q *Queries) ListNotesBySubject(ctx context.Context, arg ListNotesBySubject
 			&i.Content,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.Title,
 		); err != nil {
 			return nil, err
 		}
@@ -121,7 +125,7 @@ func (q *Queries) ListNotesBySubject(ctx context.Context, arg ListNotesBySubject
 }
 
 const listNotesByUser = `-- name: ListNotesByUser :many
-SELECT n.id, n.subject_id, n.content, n.created_at, n.updated_at
+SELECT n.id, n.subject_id, n.content, n.created_at, n.updated_at, n.title
 FROM notes n
 JOIN subjects s ON s.id = n.subject_id
 WHERE s.user_id = $1
@@ -143,6 +147,7 @@ func (q *Queries) ListNotesByUser(ctx context.Context, userID int64) ([]Note, er
 			&i.Content,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.Title,
 		); err != nil {
 			return nil, err
 		}
@@ -161,7 +166,7 @@ WHERE n.id = $1
     AND subject_id IN (
         SELECT id FROM subjects WHERE user_id = $2
     )
-RETURNING id, subject_id, content, created_at, updated_at
+RETURNING id, subject_id, content, created_at, updated_at, title
 `
 
 type UpdateNoteParams struct {
@@ -179,6 +184,7 @@ func (q *Queries) UpdateNote(ctx context.Context, arg UpdateNoteParams) (Note, e
 		&i.Content,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.Title,
 	)
 	return i, err
 }

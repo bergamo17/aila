@@ -16,6 +16,7 @@ func createRandomNote(t *testing.T) (Note, Subject) {
 
 	arg := CreateNoteParams{
 		SubjectID: subject.ID,
+		Title:     util.RandomString(12),
 		Content: pgtype.Text{
 			String: util.RandomString(12),
 			Valid:  true,
@@ -27,6 +28,7 @@ func createRandomNote(t *testing.T) (Note, Subject) {
 	require.NotEmpty(t, note)
 
 	require.Equal(t, note.SubjectID, subject.ID)
+	require.Equal(t, note.Title, arg.Title)
 	require.Equal(t, note.Content, arg.Content)
 	require.NotZero(t, note.CreatedAt)
 
