@@ -39,6 +39,21 @@ func (q *Queries) CreateSubject(ctx context.Context, arg CreateSubjectParams) (S
 	return i, err
 }
 
+const deleteSubject = `-- name: DeleteSubject :exec
+DELETE FROM subjects
+WHERE id = $1 AND user_id = $2
+`
+
+type DeleteSubjectParams struct {
+	ID     int64 `json:"id"`
+	UserID int64 `json:"user_id"`
+}
+
+func (q *Queries) DeleteSubject(ctx context.Context, arg DeleteSubjectParams) error {
+	_, err := q.db.Exec(ctx, deleteSubject, arg.ID, arg.UserID)
+	return err
+}
+
 const getSubjectById = `-- name: GetSubjectById :one
 SELECT id, user_id, subject_name, created_at, color, updated_at
 FROM subjects
@@ -105,4 +120,37 @@ func (q *Queries) ListSubjectByUser(ctx context.Context, userID int64) ([]ListSu
 		return nil, err
 	}
 	return items, nil
+}
+
+const updateSubject = `-- name: UpdateSubject :one
+UPDATE subjects
+SET subject_name = $3, color = $4, updated_at = now()
+WHERE id = $1 AND user_id = $2
+RETURNING id, user_id, subject_name, created_at, color, updated_at
+`
+
+type UpdateSubjectParams struct {
+	ID          int64  `json:"id"`
+	UserID      int64  `json:"user_id"`
+	SubjectName string `json:"subject_name"`
+	Color       string `json:"color"`
+}
+
+func (q *Queries) UpdateSubject(ctx context.Context, arg UpdateSubjectParams) (Subject, error) {
+	row := q.db.QueryRow(ctx, updateSubject,
+		arg.ID,
+		arg.UserID,
+		arg.SubjectName,
+		arg.Color,
+	)
+	var i Subject
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.SubjectName,
+		&i.CreatedAt,
+		&i.Color,
+		&i.UpdatedAt,
+	)
+	return i, err
 }

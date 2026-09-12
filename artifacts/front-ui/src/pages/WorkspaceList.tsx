@@ -4,12 +4,7 @@ import { z } from 'zod';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 
-import {
-  useListSubjects,
-  useCreateSubject,
-  useUpdateSubject,
-  useDeleteSubject,
-} from '@/lib/workspace-store';
+import { useListSubjects, useCreateSubject } from '@/hooks/use-subject';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -46,8 +41,8 @@ export default function WorkspaceList() {
 
   const { data, isLoading } = useListSubjects();
   const createMutation = useCreateSubject();
-  const updateMutation = useUpdateSubject();
-  const deleteMutation = useDeleteSubject();
+  // const updateMutation = useUpdateSubject();
+  // const deleteMutation = useDeleteSubject();
 
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -59,8 +54,8 @@ export default function WorkspaceList() {
     defaultValues: { name: '', color: COLORS[0] },
   });
 
-  const filtered = data?.data.filter((s) =>
-    s.name.toLowerCase().includes(searchTerm.toLowerCase()),
+  const filtered = data?.filter((s) =>
+    s.subject_name.toLowerCase().includes(searchTerm.toLowerCase()),
   ) ?? [];
 
   const openCreateForm = () => {
@@ -182,15 +177,15 @@ export default function WorkspaceList() {
 
               <Link href={`/workspace/${subject.id}`}>
                 <h3 className="font-semibold mb-1 hover:text-primary transition-colors cursor-pointer">
-                  {subject.name}
+                  {subject.subject_name}
                 </h3>
               </Link>
               <div className="flex items-center justify-between mt-3">
                 <Badge variant="secondary" className="font-mono text-xs font-normal">
-                  {subject.notesCount} notes
+                  {subject.notes_count} notes
                 </Badge>
                 <span className="text-xs text-muted-foreground">
-                  {new Date(subject.updatedAt).toLocaleDateString()}
+                  {new Date(subject.updated_at).toLocaleDateString()}
                 </span>
               </div>
             </Card>

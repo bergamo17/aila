@@ -1,6 +1,5 @@
 import apiFetch from "@/lib/api";
-import type { CreateSubjectRequest, SubjectResponse } from "@/types/subject";
-import { X } from "lucide-react";
+import type { CreateSubjectRequest, SubjectResponse, SubjectWithNotesCountResponse } from "@/types/subject";
 
 export const subjectApi = {
     create: async (payload: CreateSubjectRequest): Promise<SubjectResponse> => {
@@ -8,7 +7,7 @@ export const subjectApi = {
             method: "POST",
             requireAuth: true,
             body: JSON.stringify(payload),
-        })
+        });
     },
     getById: async (id: number): Promise<SubjectResponse> => {
         return await apiFetch(`/subject/${id}`, {
@@ -16,7 +15,7 @@ export const subjectApi = {
             requireAuth: true,
         });
     },
-    listByUser: async(): Promise<SubjectResponse[]> => {
+    listByUser: async(): Promise<SubjectWithNotesCountResponse[]> => {
         return await apiFetch("/subject", {
             method: "GET",
             requireAuth: true,

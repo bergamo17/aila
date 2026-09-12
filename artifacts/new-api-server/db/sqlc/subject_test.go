@@ -81,3 +81,25 @@ func TestListSubjectByUser(t *testing.T) {
 	}
 	require.True(t, found)
 }
+
+func TestUpdateSubject(t *testing.T) {
+	subject := createRandomSubject(t)
+	require.NotEmpty(t, subject)
+
+	arg := UpdateSubjectParams{
+		ID:          subject.ID,
+		UserID:      subject.UserID,
+		SubjectName: "test",
+		Color:       "blue",
+	}
+
+	updatedSubject, err := testQueries.UpdateSubject(context.Background(), arg)
+	require.NoError(t, err)
+	require.NotEmpty(t, updatedSubject)
+
+	require.Equal(t, updatedSubject.ID, subject.ID)
+	require.Equal(t, updatedSubject.UserID, subject.UserID)
+
+	require.NotEqual(t, updatedSubject.SubjectName, subject.SubjectName)
+	require.NotEqual(t, updatedSubject.Color, subject.Color)
+}

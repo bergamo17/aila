@@ -74,6 +74,7 @@ func (server *Server) createNote(ctx *gin.Context) {
 	}
 
 	result := &newNoteResponse{
+		Id:        note.ID,
 		SubjectId: note.SubjectID,
 		Title:     note.Title,
 		Content:   note.Content.String,

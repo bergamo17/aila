@@ -162,3 +162,99 @@ func (server *Server) listSubjectByUser(ctx *gin.Context) {
 
 	ctx.JSON(http.StatusOK, result)
 }
+
+type updateSubjectRequest struct {
+	SubjectName string `json:"subject_name" binding:"required"`
+	Color       string `json:"color" binding:"required"`
+}
+
+func (server *Server) updateSubject(ctx *gin.Context) {
+	var uri subjectUri
+	var req updateSubjectRequest
+
+	err := ctx.ShouldBindUri(&uri)
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, errResponse(err))
+		return
+	}
+
+	err = ctx.ShouldBindJSON(&req)
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, errResponse(err))
+		return
+	}
+
+	authPayload := ctx.MustGet(authorizationPayloadKey).(*token.Payload)
+
+	user, err := server.store.GetUser(ctx, authPayload.Username)
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			ctx.JSON(http.StatusNotFound, errResponse(errors.New("User tidak ditemukan")))
+			return
+		}
+		ctx.JSON(http.StatusInternalServerError, errResponse(err))
+		return
+	}
+
+	arg := db.UpdateSubjectParams{
+		ID:          uri.Id,
+		UserID:      user.ID,
+		SubjectName: req.SubjectName,
+		Color:       req.Color,
+	}
+
+	updatedSubject, err := server.store.UpdateSubject(ctx, arg)
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			ctx.JSON(http.StatusNotFound, errResponse(errors.New("Mata kuliah tidak ditemukan")))
+			return
+		}
+		ctx.JSON(http.StatusInternalServerError, errResponse(err))
+		return
+	}
+
+	result := &subjectResponse{
+		Id:          updatedSubject.ID,
+		SubjectName: updatedSubject.SubjectName,
+		Color:       updatedSubject.Color,
+		CreatedAt:   updatedSubject.CreatedAt.Time,
+		UpdatedAt:   updatedSubject.UpdatedAt.Time,
+	}
+
+	ctx.JSON(http.StatusOK, result)
+}
+
+func (server *Server) deleteSubject(ctx *gin.Context) {
+	var uri subjectUri
+
+	err := ctx.ShouldBindUri(&uri)
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, errResponse(err))
+		return
+	}
+
+	authPayload := ctx.MustGet(authorizationPayloadKey).(*token.Payload)
+
+	user, err := server.store.GetUser(ctx, authPayload.Username)
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			ctx.JSON(http.StatusNotFound, errResponse(errors.New("User tidak ditemukan")))
+			return
+		}
+		ctx.JSON(http.StatusInternalServerError, errResponse(err))
+		return
+	}
+
+	arg := db.DeleteSubjectParams{
+		ID:     uri.Id,
+		UserID: user.ID,
+	}
+
+	err = server.store.DeleteSubject(ctx, arg)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, errResponse(err))
+		return
+	}
+
+	ctx.JSON(http.StatusOK, nil)
+}

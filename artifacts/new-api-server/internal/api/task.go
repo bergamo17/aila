@@ -17,8 +17,9 @@ type createTaskRequest struct {
 }
 
 type createTaskResponse struct {
+	Id         int64  `json:"id"`
 	SubjectID  int64  `json:"subject_id"`
-	TaskStatus string `json:"subject_name"`
+	TaskStatus string `json:"task_status"`
 	Title      string `json:"title"`
 }
 
@@ -66,6 +67,7 @@ func (server *Server) createTask(ctx *gin.Context) {
 	}
 
 	result := &createTaskResponse{
+		Id:         task.ID,
 		SubjectID:  task.SubjectID,
 		TaskStatus: task.TaskStatus,
 		Title:      task.Title,

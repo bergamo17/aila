@@ -18,6 +18,7 @@ type Querier interface {
 	CreateTask(ctx context.Context, arg CreateTaskParams) (Task, error)
 	CreateUser(ctx context.Context, arg CreateUserParams) (User, error)
 	DeleteNote(ctx context.Context, arg DeleteNoteParams) error
+	DeleteSubject(ctx context.Context, arg DeleteSubjectParams) error
 	DeleteTask(ctx context.Context, arg DeleteTaskParams) error
 	GetNote(ctx context.Context, arg GetNoteParams) (Note, error)
 	GetSession(ctx context.Context, id pgtype.UUID) (Session, error)
@@ -32,6 +33,7 @@ type Querier interface {
 	ListTaskBySubject(ctx context.Context, arg ListTaskBySubjectParams) ([]Task, error)
 	ListTaskByUser(ctx context.Context, userID int64) ([]Task, error)
 	UpdateNote(ctx context.Context, arg UpdateNoteParams) (Note, error)
+	UpdateSubject(ctx context.Context, arg UpdateSubjectParams) (Subject, error)
 	UpdateTask(ctx context.Context, arg UpdateTaskParams) (Task, error)
 	UpdateTaskStatus(ctx context.Context, arg UpdateTaskStatusParams) (Task, error)
 }
