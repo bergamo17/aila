@@ -71,7 +71,7 @@ function reducer(state: WorkspaceState, action: Action): WorkspaceState {
         case 'UPDATE_NOTE':
             return {
                 ...state,
-                notes: state.notes.map((s) =>
+                notes: state.notes.map((n) =>
                     n.id === action.payload.id ? {...n, ...action.payload.data, updatedAt: now()} : n,
                 ),
             };

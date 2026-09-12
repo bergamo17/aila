@@ -56,3 +56,8 @@ app.env
 *.env
 process.env
 docker-compose.yml
+
+# The Unimportant
+.replit
+.replitignore
+replit.md
