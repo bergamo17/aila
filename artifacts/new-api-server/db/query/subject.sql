@@ -1,8 +1,8 @@
 -- name: CreateSubject :one
 INSERT INTO subjects (
-    user_id, subject_name
+    user_id, subject_name, color
 ) VALUES (
-    $1, $2
+    $1, $2, $3
 ) RETURNING *;
 
 -- name: ListSubjectByUser :many
@@ -14,7 +14,7 @@ GROUP BY s.id
 ORDER BY s.created_at DESC;
 
 -- name: GetSubjectById :one
-SELECT id, user_id, subject_name, created_at
+SELECT id, user_id, subject_name, created_at, color, updated_at
 FROM subjects
 WHERE id = $1
 LIMIT 1;

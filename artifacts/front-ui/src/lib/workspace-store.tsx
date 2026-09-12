@@ -1,3 +1,4 @@
+import { noteApi } from "@/api/note";
 import React, { createContext, useContext, useReducer, useCallback } from "react";
 
 export interface Subject {
@@ -164,15 +165,31 @@ export function useDeleteSubject() {
 export function useCreateNote() {
     const {dispatch} = useWorkspaceStore();
     const mutate = useCallback(
-        (
+        async (
             input: {data: {subjectId: string; title: string; content: string}},
-            opts?: {onSuccess?: () => void},
+            opts?: {onSuccess?: () => void; onError?: (e: Error) => void},
         ) => {
-            dispatch({
-                type: 'ADD_NOTE',
-                payload: {id: genId(), ...input.data, createdAt: now(), updatedAt: now()},
-            });
-            opts?.onSuccess?.();
+            try {
+                const note = await noteApi.create({
+                    subject_id: Number(input.data.subjectId),
+                    title: input.data.title,
+                    content: input.data.content,
+                });
+                dispatch({
+                    type: 'ADD_NOTE',
+                    payload: {
+                        id: String(note.id),
+                        subjectId: input.data.subjectId,
+                        title: note.title,
+                        content: note.content,
+                        createdAt: note.created_at,
+                        updatedAt: note.created_at,
+                    },
+                });
+                opts?.onSuccess?.();
+            } catch (e) {
+                opts?.onError?.(e as Error);
+            }
         },
         [dispatch],
     );

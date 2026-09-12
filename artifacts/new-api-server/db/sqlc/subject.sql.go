@@ -13,31 +13,34 @@ import (
 
 const createSubject = `-- name: CreateSubject :one
 INSERT INTO subjects (
-    user_id, subject_name
+    user_id, subject_name, color
 ) VALUES (
-    $1, $2
-) RETURNING id, user_id, subject_name, created_at
+    $1, $2, $3
+) RETURNING id, user_id, subject_name, created_at, color, updated_at
 `
 
 type CreateSubjectParams struct {
 	UserID      int64  `json:"user_id"`
 	SubjectName string `json:"subject_name"`
+	Color       string `json:"color"`
 }
 
 func (q *Queries) CreateSubject(ctx context.Context, arg CreateSubjectParams) (Subject, error) {
-	row := q.db.QueryRow(ctx, createSubject, arg.UserID, arg.SubjectName)
+	row := q.db.QueryRow(ctx, createSubject, arg.UserID, arg.SubjectName, arg.Color)
 	var i Subject
 	err := row.Scan(
 		&i.ID,
 		&i.UserID,
 		&i.SubjectName,
 		&i.CreatedAt,
+		&i.Color,
+		&i.UpdatedAt,
 	)
 	return i, err
 }
 
 const getSubjectById = `-- name: GetSubjectById :one
-SELECT id, user_id, subject_name, created_at
+SELECT id, user_id, subject_name, created_at, color, updated_at
 FROM subjects
 WHERE id = $1
 LIMIT 1
@@ -51,12 +54,14 @@ func (q *Queries) GetSubjectById(ctx context.Context, id int64) (Subject, error)
 		&i.UserID,
 		&i.SubjectName,
 		&i.CreatedAt,
+		&i.Color,
+		&i.UpdatedAt,
 	)
 	return i, err
 }
 
 const listSubjectByUser = `-- name: ListSubjectByUser :many
-SELECT s.id, s.user_id, s.subject_name, s.created_at, COUNT(n.id) AS notes_count
+SELECT s.id, s.user_id, s.subject_name, s.created_at, s.color, s.updated_at, COUNT(n.id) AS notes_count
 FROM subjects AS s
 LEFT JOIN notes n ON n.subject_id = s.id
 WHERE s.user_id = $1
@@ -69,6 +74,8 @@ type ListSubjectByUserRow struct {
 	UserID      int64              `json:"user_id"`
 	SubjectName string             `json:"subject_name"`
 	CreatedAt   pgtype.Timestamptz `json:"created_at"`
+	Color       string             `json:"color"`
+	UpdatedAt   pgtype.Timestamptz `json:"updated_at"`
 	NotesCount  int64              `json:"notes_count"`
 }
 
@@ -86,6 +93,8 @@ func (q *Queries) ListSubjectByUser(ctx context.Context, userID int64) ([]ListSu
 			&i.UserID,
 			&i.SubjectName,
 			&i.CreatedAt,
+			&i.Color,
+			&i.UpdatedAt,
 			&i.NotesCount,
 		); err != nil {
 			return nil, err

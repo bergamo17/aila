@@ -19,6 +19,7 @@ type createNoteRequest struct {
 }
 
 type newNoteResponse struct {
+	Id        int64     `json:"id"`
 	SubjectId int64     `json:"subject_id"`
 	Title     string    `json:"title"`
 	Content   string    `json:"content"`

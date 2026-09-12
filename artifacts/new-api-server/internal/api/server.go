@@ -46,6 +46,9 @@ func (server *Server) setupRouter() {
 	authRoutes := router.Group("/").Use(authMiddleware(server.tokenMaker))
 
 	authRoutes.POST("/subject/create", server.createSubject)
+	authRoutes.GET("/subject/:id", server.getSubjectById)
+	authRoutes.GET("/subject", server.listSubjectByUser)
+	authRoutes.POST("/note/create", server.createNote)
 	authRoutes.POST("/task/create", server.createTask)
 	authRoutes.PUT("/task/:id", server.updateTask)
 	authRoutes.PUT("/task/status/:id", server.updateTaskStatus)

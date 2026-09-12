@@ -55,6 +55,8 @@ type Subject struct {
 	UserID      int64              `json:"user_id"`
 	SubjectName string             `json:"subject_name"`
 	CreatedAt   pgtype.Timestamptz `json:"created_at"`
+	Color       string             `json:"color"`
+	UpdatedAt   pgtype.Timestamptz `json:"updated_at"`
 }
 
 type Task struct {
