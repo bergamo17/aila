@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient} from "@tanstack/react-query";
 import { subjectApi } from "@/api/subject";
-import type { CreateSubjectRequest } from "@/types/subject";
+import type { SubjectRequest } from "@/types/subject";
 
 const SUBJECT_KEY = ["subjects"];
 
@@ -22,7 +22,18 @@ export function useSubject(id: number | undefined) {
 export function useCreateSubject() {
     const qc = useQueryClient();
     return useMutation({
-        mutationFn: (payload: CreateSubjectRequest) => subjectApi.create(payload),
+        mutationFn: (payload: SubjectRequest) => subjectApi.create(payload),
         onSuccess: () => qc.invalidateQueries({ queryKey: SUBJECT_KEY }),
+    });
+}
+
+export function useDeleteSubject() {
+    const qc = useQueryClient();
+    return useMutation({
+        mutationFn: (id: number) => subjectApi.delete(id),
+        onSuccess: (_data, id) => {
+            qc.invalidateQueries({ queryKey: SUBJECT_KEY });
+            qc.removeQueries({ queryKey: [...SUBJECT_KEY, id] });
+        },
     });
 }

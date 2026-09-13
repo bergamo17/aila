@@ -11,7 +11,7 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
-type createSubjectRequest struct {
+type subjectRequest struct {
 	SubjectName string `json:"subject_name" binding:"required"`
 	Color       string `json:"color" binding:"required"`
 }
@@ -25,7 +25,7 @@ type subjectResponse struct {
 }
 
 func (server *Server) createSubject(ctx *gin.Context) {
-	var req createSubjectRequest
+	var req subjectRequest
 
 	err := ctx.ShouldBindJSON(&req)
 	if err != nil {
@@ -163,14 +163,9 @@ func (server *Server) listSubjectByUser(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, result)
 }
 
-type updateSubjectRequest struct {
-	SubjectName string `json:"subject_name" binding:"required"`
-	Color       string `json:"color" binding:"required"`
-}
-
 func (server *Server) updateSubject(ctx *gin.Context) {
 	var uri subjectUri
-	var req updateSubjectRequest
+	var req subjectRequest
 
 	err := ctx.ShouldBindUri(&uri)
 	if err != nil {

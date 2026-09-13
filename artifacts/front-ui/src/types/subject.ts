@@ -1,4 +1,4 @@
-export interface CreateSubjectRequest {
+export interface SubjectRequest {
     subject_name: string;
     color: string;
 }
