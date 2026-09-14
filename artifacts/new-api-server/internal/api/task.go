@@ -238,5 +238,5 @@ func (server *Server) deleteTask(ctx *gin.Context) {
 		return
 	}
 
-	ctx.JSON(http.StatusOK, nil)
+	ctx.JSON(http.StatusOK, gin.H{"message": "Task berhasil dihapus"})
 }

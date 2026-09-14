@@ -11,7 +11,7 @@ export function useListSubjects() {
     });
 }
 
-export function useSubject(id: number | undefined) {
+export function useGetSubject(id: number | undefined) {
     return useQuery({
         queryKey: [...SUBJECT_KEY, id],
         queryFn: () => subjectApi.getById(id!),
@@ -24,6 +24,17 @@ export function useCreateSubject() {
     return useMutation({
         mutationFn: (payload: SubjectRequest) => subjectApi.create(payload),
         onSuccess: () => qc.invalidateQueries({ queryKey: SUBJECT_KEY }),
+    });
+}
+
+export function useUpdateSubject() {
+    const qc = useQueryClient();
+    return useMutation({
+        mutationFn: ({id, payload}: {id: number, payload: SubjectRequest}) => subjectApi.update(id, payload),
+        onSuccess: (_data, { id }) => {
+            qc.invalidateQueries({queryKey: SUBJECT_KEY});
+            qc.invalidateQueries({queryKey: [...SUBJECT_KEY, id]});
+        }
     });
 }
 

@@ -4,7 +4,7 @@ import { z } from 'zod';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 
-import { useSubject, useListNotes, useCreateNote, useDeleteNote } from '@/lib/workspace-store';
+import { useGetSubject, useListNotes, useCreateNote, useDeleteNote } from '@/lib/workspace-store';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';

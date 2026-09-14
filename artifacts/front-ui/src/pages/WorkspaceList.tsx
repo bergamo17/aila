@@ -4,7 +4,7 @@ import { z } from 'zod';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 
-import { useListSubjects, useCreateSubject } from '@/hooks/use-subject';
+import { useListSubjects, useCreateSubject, useGetSubject, useUpdateSubject, useDeleteSubject } from '@/hooks/use-subject';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -41,13 +41,13 @@ export default function WorkspaceList() {
 
   const { data, isLoading } = useListSubjects();
   const createMutation = useCreateSubject();
-  // const updateMutation = useUpdateSubject();
-  // const deleteMutation = useDeleteSubject();
+  const updateMutation = useUpdateSubject();
+  const deleteMutation = useDeleteSubject();
 
   const [isFormOpen, setIsFormOpen] = useState(false);
-  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editingId, setEditingId] = useState<number | null>(null);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
-  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<number | null>(null);
 
   const form = useForm<SubjectFormValues>({
     resolver: zodResolver(subjectSchema),
@@ -64,16 +64,18 @@ export default function WorkspaceList() {
     setIsFormOpen(true);
   };
 
-  const openEditForm = (subject: { id: string; name: string; color: string }) => {
+  const openEditForm = (subject: { id: number; subject_name: string; color: string }) => {
     setEditingId(subject.id);
-    form.reset({ name: subject.name, color: subject.color });
+    form.reset({ name: subject.subject_name, color: subject.color });
     setIsFormOpen(true);
   };
 
   const onSubmit = (values: SubjectFormValues) => {
+    const payload = { subject_name: values.name, color: values.color };
+
     if (editingId) {
       updateMutation.mutate(
-        { id: editingId, data: values },
+        { id: editingId, payload },
         {
           onSuccess: () => {
             toast({ title: 'Subject berhasil diperbarui' });
@@ -83,7 +85,7 @@ export default function WorkspaceList() {
       );
     } else {
       createMutation.mutate(
-        { data: values },
+        payload,
         {
           onSuccess: () => {
             toast({ title: 'Subject berhasil dibuat' });
@@ -97,7 +99,7 @@ export default function WorkspaceList() {
   const confirmDelete = () => {
     if (!deletingId) return;
     deleteMutation.mutate(
-      { id: deletingId },
+      deletingId,
       {
         onSuccess: () => {
           toast({ title: 'Subject dihapus' });
