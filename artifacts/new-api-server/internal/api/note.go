@@ -85,7 +85,7 @@ func (server *Server) createNote(ctx *gin.Context) {
 }
 
 type noteUri struct {
-	Id int64 `json:"id" binding:"required,min=1"`
+	Id int64 `uri:"id" binding:"required,min=1"`
 }
 
 func (server *Server) getNoteById(ctx *gin.Context) {
@@ -170,13 +170,13 @@ func (server *Server) deleteNote(ctx *gin.Context) {
 }
 
 type listNoteBySubjectRequest struct {
-	SubjectId int64 `json:"subject_id"`
+	SubjectId int64 `uri:"subject_id" binding:"required,min=1"`
 }
 
 func (server *Server) listNoteBySubject(ctx *gin.Context) {
 	var req listNoteBySubjectRequest
 
-	err := ctx.ShouldBindJSON(&req)
+	err := ctx.ShouldBindUri(&req)
 	if err != nil {
 		ctx.JSON(http.StatusBadRequest, errResponse(err))
 		return

@@ -15,11 +15,10 @@ export interface CreateNoteRequest {
     content: string;
 }
 
-export interface NewNote {
+export interface NoteResponse {
     id: number;
     subject_id: number;
     title: string;
     content: string;
     created_at: string;
 }
-

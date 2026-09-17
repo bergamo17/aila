@@ -4,7 +4,8 @@ import { z } from 'zod';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 
-import { useGetSubject, useListNotes, useCreateNote, useDeleteNote } from '@/lib/workspace-store';
+import { useGetSubject } from '@/hooks/use-subject';
+import { useListNoteBySubject, useCreateNote, useListNoteByUser, useDeleteNote } from '@/hooks/use-note';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -31,18 +32,23 @@ type NoteFormValues = z.infer<typeof noteSchema>;
 
 export default function SubjectDetail() {
   const { id } = useParams();
+  const subjectId = Number(id)
   const { toast } = useToast();
 
-  const { data: subject } = useSubject(id);
-  const { data: notesData } = useListNotes(id);
+  const { data: subject, isLoading: isSubjectLoading } = useGetSubject(subjectId);
+  const { data: notes } = useListNoteBySubject(subjectId);
   const createMutation = useCreateNote();
-  const deleteMutation = useDeleteNote();
+  const deleteMutation = useDeleteNote(subjectId);
 
   const [isFormOpen, setIsFormOpen] = useState(false);
   const form = useForm<NoteFormValues>({
     resolver: zodResolver(noteSchema),
     defaultValues: { title: '', content: '' },
   });
+
+  if (isSubjectLoading) {
+    return <div className='p-6 text-center text-muted-foreground'>Memuat...</div>;
+  }
 
   if (!subject) {
     return (
@@ -57,7 +63,7 @@ export default function SubjectDetail() {
 
   const onSubmit = (values: NoteFormValues) => {
     createMutation.mutate(
-      { data: { subjectId: subject.id, title: values.title, content: values.content ?? '' } },
+      { subject_id: subjectId, title: values.title, content: values.content ?? '' },
       {
         onSuccess: () => {
           toast({ title: 'Note berhasil dibuat' });
@@ -83,7 +89,7 @@ export default function SubjectDetail() {
             className="w-3 h-8 rounded-full"
             style={{ backgroundColor: subject.color }}
           />
-          <h1 className="text-2xl font-bold tracking-tight">{subject.name}</h1>
+          <h1 className="text-2xl font-bold tracking-tight">{subject.subject_name}</h1>
         </div>
         <Button onClick={() => setIsFormOpen(true)}>
           <Plus className="h-4 w-4 mr-2" />
@@ -91,13 +97,13 @@ export default function SubjectDetail() {
         </Button>
       </div>
 
-      {notesData.data.length === 0 ? (
+      {!notes || notes.length === 0 ? (
         <Card className="p-12 text-center text-muted-foreground">
           Belum ada catatan di subject ini.
         </Card>
       ) : (
         <div className="space-y-3">
-          {notesData.data.map((note) => (
+          {notes.map((note) => (
             <Card key={note.id} className="p-4 hover-elevate transition-all">
               <div className="flex items-start justify-between gap-4">
                 <div className="flex gap-3 min-w-0">
@@ -108,7 +114,7 @@ export default function SubjectDetail() {
                       {note.content || 'Tidak ada isi'}
                     </p>
                     <p className="text-xs text-muted-foreground mt-2">
-                      {new Date(note.updatedAt).toLocaleString()}
+                      {new Date(note.created_at).toLocaleString()}
                     </p>
                   </div>
                 </div>
@@ -121,10 +127,9 @@ export default function SubjectDetail() {
                   <DropdownMenuContent align="end">
                     <DropdownMenuItem
                       onClick={() =>
-                        deleteMutation.mutate(
-                          { id: note.id },
-                          { onSuccess: () => toast({ title: 'Note dihapus' }) },
-                        )
+                        deleteMutation.mutate(note.id, {
+                          onSuccess: () => toast({ title: 'Note dihapus' }),
+                        })
                       }
                       className="cursor-pointer text-destructive focus:bg-destructive focus:text-destructive-foreground"
                     >
