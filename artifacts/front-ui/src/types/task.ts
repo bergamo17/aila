@@ -13,6 +13,7 @@ export interface UpdateTaskRequest {
 
 export interface UpdateTaskStatusRequest {
     task_status: string;
+    position: number;
 }
 
 export interface TaskResponse {

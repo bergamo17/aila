@@ -7,24 +7,32 @@ package db
 
 import (
 	"context"
+
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 const createTask = `-- name: CreateTask :one
 INSERT INTO tasks (
-    user_id, subject_id, title
+    user_id, subject_id, title, description
 ) VALUES (
-    $1, $2, $3
+    $1, $2, $3, $4
 ) RETURNING id, user_id, subject_id, title, task_status, created_at, updated_at, position, description
 `
 
 type CreateTaskParams struct {
-	UserID    int64  `json:"user_id"`
-	SubjectID int64  `json:"subject_id"`
-	Title     string `json:"title"`
+	UserID      int64       `json:"user_id"`
+	SubjectID   int64       `json:"subject_id"`
+	Title       string      `json:"title"`
+	Description pgtype.Text `json:"description"`
 }
 
 func (q *Queries) CreateTask(ctx context.Context, arg CreateTaskParams) (Task, error) {
-	row := q.db.QueryRow(ctx, createTask, arg.UserID, arg.SubjectID, arg.Title)
+	row := q.db.QueryRow(ctx, createTask,
+		arg.UserID,
+		arg.SubjectID,
+		arg.Title,
+		arg.Description,
+	)
 	var i Task
 	err := row.Scan(
 		&i.ID,

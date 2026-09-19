@@ -40,9 +40,9 @@ export function useUpdateTask() {
 
 export function useUpdateTaskStatus() {
     const queryClient = useQueryClient();
-    return useMutation<Task, Error, {id: number; newStatus: TaskStatus}>({
-        mutationFn: ({ id, newStatus }: { id: number; newStatus: TaskStatus }) =>
-            updateTaskStatus(id, { task_status: STATUS_TO_BACKEND[newStatus] }),
+    return useMutation<Task, Error, {id: number; newStatus: TaskStatus; position: number}>({
+        mutationFn: ({ id, newStatus, position }) =>
+            updateTaskStatus(id, { task_status: STATUS_TO_BACKEND[newStatus], position }),
         onSuccess: () => queryClient.invalidateQueries({ queryKey: TASK_KEY }),
     });
 }

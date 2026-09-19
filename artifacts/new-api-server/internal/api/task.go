@@ -9,6 +9,7 @@ import (
 	"github.com/bergamo17/aila/internal/token"
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 type createTaskRequest struct {
@@ -60,9 +61,10 @@ func (server *Server) createTask(ctx *gin.Context) {
 	}
 
 	arg := db.CreateTaskParams{
-		UserID:    user.ID,
-		SubjectID: subject.ID,
-		Title:     req.Title,
+		UserID:      user.ID,
+		SubjectID:   subject.ID,
+		Title:       req.Title,
+		Description: pgtype.Text{String: req.Description, Valid: true},
 	}
 
 	task, err := server.store.CreateTask(ctx, arg)
