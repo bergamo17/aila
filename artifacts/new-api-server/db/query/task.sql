@@ -40,3 +40,29 @@ RETURNING *;
 -- name: DeleteTask :exec
 DELETE FROM tasks
 WHERE id = $1 AND user_id = $2;
+
+-- name: ListTasksByUser :many
+SELECT t.*
+FROM tasks t
+WHERE t.user_id = $1
+ORDER BY t.task_status, t."position";
+
+-- name: UpdateTaskPosition :one
+UPDATE tasks
+SET position = $3, task_status = $4, updated_at = now()
+WHERE id = $1 AND user_id = $2
+RETURNING *;
+
+-- name: ShiftTaskPositionUp :exec
+UPDATE tasks 
+SET position = position + 1
+WHERE user_id = $1 AND task_status = $2
+    AND position >= $3 AND position < $4
+    AND id != $5;
+
+-- name: ShiftTaskPositionDown :exec
+UPDATE tasks
+SET position = position - 1
+WHERE user_id = $1 AND task_status = $2
+    AND position > $3 AND position <= $4
+    AND id != $5;

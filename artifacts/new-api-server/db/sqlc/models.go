@@ -60,13 +60,15 @@ type Subject struct {
 }
 
 type Task struct {
-	ID         int64              `json:"id"`
-	UserID     int64              `json:"user_id"`
-	SubjectID  int64              `json:"subject_id"`
-	Title      string             `json:"title"`
-	TaskStatus string             `json:"task_status"`
-	CreatedAt  pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt  pgtype.Timestamptz `json:"updated_at"`
+	ID          int64              `json:"id"`
+	UserID      int64              `json:"user_id"`
+	SubjectID   int64              `json:"subject_id"`
+	Title       string             `json:"title"`
+	TaskStatus  string             `json:"task_status"`
+	CreatedAt   pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt   pgtype.Timestamptz `json:"updated_at"`
+	Position    int64              `json:"position"`
+	Description pgtype.Text        `json:"description"`
 }
 
 type User struct {

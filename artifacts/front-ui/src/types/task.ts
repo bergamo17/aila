@@ -1,25 +1,14 @@
-export type TaskStatus = 'to do' | 'in progress' | 'done';
+export type TaskStatus = 'todo' | 'in_progress' | 'done';
 
 export interface CreateTaskRequest {
     subject_id: number;
     title: string;
-}
-
-export interface CreateTaskResponse {
-    id: number;
-    subject_id: number;
-    task_status: string;
-    title: string;
+    description: string;
 }
 
 export interface UpdateTaskRequest {
     title: string;
-}
-
-export interface UpdateTaskResponse {
-    title: string;
-    task_status: string;
-    updated_at: string;
+    description: string;
 }
 
 export interface UpdateTaskStatusRequest {
@@ -28,10 +17,11 @@ export interface UpdateTaskStatusRequest {
 
 export interface TaskResponse {
     id: number;
-    user_id: number;
     subject_id: number;
 	title: string;
 	task_status: string;
+    position: number;
+    description: string;
 	created_at: string;
 	updated_at: string;
 }

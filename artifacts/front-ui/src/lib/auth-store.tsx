@@ -5,6 +5,7 @@ import type { User, CreateUserRequest, LoginUserRequest, RequestToken } from "@/
 interface AuthState {
     user: User | null;
     isAuthenticated: boolean;
+    setUser: (user: User) => void;
     login: (payload: LoginUserRequest) => Promise<void>;
     register: (payload: CreateUserRequest) => Promise<void>;
     logout: () => Promise<void>;
@@ -13,6 +14,8 @@ interface AuthState {
 export const useAuthStore = create<AuthState>((set) => ({
     user: null,
     isAuthenticated: !!localStorage.getItem("access_token"),
+
+    setUser: (user) => set({ user }),
 
     login: async (payload) => {
         const data = await authApi.login(payload);

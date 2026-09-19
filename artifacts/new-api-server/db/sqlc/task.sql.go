@@ -14,7 +14,7 @@ INSERT INTO tasks (
     user_id, subject_id, title
 ) VALUES (
     $1, $2, $3
-) RETURNING id, user_id, subject_id, title, task_status, created_at, updated_at
+) RETURNING id, user_id, subject_id, title, task_status, created_at, updated_at, position, description
 `
 
 type CreateTaskParams struct {
@@ -34,6 +34,8 @@ func (q *Queries) CreateTask(ctx context.Context, arg CreateTaskParams) (Task, e
 		&i.TaskStatus,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.Position,
+		&i.Description,
 	)
 	return i, err
 }
@@ -54,7 +56,7 @@ func (q *Queries) DeleteTask(ctx context.Context, arg DeleteTaskParams) error {
 }
 
 const getTask = `-- name: GetTask :one
-SELECT id, user_id, subject_id, title, task_status, created_at, updated_at FROM tasks
+SELECT id, user_id, subject_id, title, task_status, created_at, updated_at, position, description FROM tasks
 WHERE id = $1 AND user_id = $2
 LIMIT 1
 `
@@ -75,12 +77,14 @@ func (q *Queries) GetTask(ctx context.Context, arg GetTaskParams) (Task, error) 
 		&i.TaskStatus,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.Position,
+		&i.Description,
 	)
 	return i, err
 }
 
 const listTaskByStatus = `-- name: ListTaskByStatus :many
-SELECT id, user_id, subject_id, title, task_status, created_at, updated_at FROM tasks
+SELECT id, user_id, subject_id, title, task_status, created_at, updated_at, position, description FROM tasks
 WHERE user_id = $1 AND task_status = $2
 ORDER BY created_at DESC
 `
@@ -107,6 +111,8 @@ func (q *Queries) ListTaskByStatus(ctx context.Context, arg ListTaskByStatusPara
 			&i.TaskStatus,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.Position,
+			&i.Description,
 		); err != nil {
 			return nil, err
 		}
@@ -119,7 +125,7 @@ func (q *Queries) ListTaskByStatus(ctx context.Context, arg ListTaskByStatusPara
 }
 
 const listTaskBySubject = `-- name: ListTaskBySubject :many
-SELECT id, user_id, subject_id, title, task_status, created_at, updated_at FROM tasks
+SELECT id, user_id, subject_id, title, task_status, created_at, updated_at, position, description FROM tasks
 WHERE subject_id = $1 AND user_id = $2
 ORDER BY created_at DESC
 `
@@ -146,6 +152,8 @@ func (q *Queries) ListTaskBySubject(ctx context.Context, arg ListTaskBySubjectPa
 			&i.TaskStatus,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.Position,
+			&i.Description,
 		); err != nil {
 			return nil, err
 		}
@@ -158,7 +166,7 @@ func (q *Queries) ListTaskBySubject(ctx context.Context, arg ListTaskBySubjectPa
 }
 
 const listTaskByUser = `-- name: ListTaskByUser :many
-SELECT id, user_id, subject_id, title, task_status, created_at, updated_at FROM tasks
+SELECT id, user_id, subject_id, title, task_status, created_at, updated_at, position, description FROM tasks
 WHERE user_id = $1
 ORDER BY created_at DESC
 `
@@ -180,6 +188,8 @@ func (q *Queries) ListTaskByUser(ctx context.Context, userID int64) ([]Task, err
 			&i.TaskStatus,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.Position,
+			&i.Description,
 		); err != nil {
 			return nil, err
 		}
@@ -191,11 +201,102 @@ func (q *Queries) ListTaskByUser(ctx context.Context, userID int64) ([]Task, err
 	return items, nil
 }
 
+const listTasksByUser = `-- name: ListTasksByUser :many
+SELECT t.id, t.user_id, t.subject_id, t.title, t.task_status, t.created_at, t.updated_at, t.position, t.description
+FROM tasks t
+WHERE t.user_id = $1
+ORDER BY t.task_status, t."position"
+`
+
+func (q *Queries) ListTasksByUser(ctx context.Context, userID int64) ([]Task, error) {
+	rows, err := q.db.Query(ctx, listTasksByUser, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []Task{}
+	for rows.Next() {
+		var i Task
+		if err := rows.Scan(
+			&i.ID,
+			&i.UserID,
+			&i.SubjectID,
+			&i.Title,
+			&i.TaskStatus,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.Position,
+			&i.Description,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const shiftTaskPositionDown = `-- name: ShiftTaskPositionDown :exec
+UPDATE tasks
+SET position = position - 1
+WHERE user_id = $1 AND task_status = $2
+    AND position > $3 AND position <= $4
+    AND id != $5
+`
+
+type ShiftTaskPositionDownParams struct {
+	UserID     int64  `json:"user_id"`
+	TaskStatus string `json:"task_status"`
+	Position   int64  `json:"position"`
+	Position_2 int64  `json:"position_2"`
+	ID         int64  `json:"id"`
+}
+
+func (q *Queries) ShiftTaskPositionDown(ctx context.Context, arg ShiftTaskPositionDownParams) error {
+	_, err := q.db.Exec(ctx, shiftTaskPositionDown,
+		arg.UserID,
+		arg.TaskStatus,
+		arg.Position,
+		arg.Position_2,
+		arg.ID,
+	)
+	return err
+}
+
+const shiftTaskPositionUp = `-- name: ShiftTaskPositionUp :exec
+UPDATE tasks 
+SET position = position + 1
+WHERE user_id = $1 AND task_status = $2
+    AND position >= $3 AND position < $4
+    AND id != $5
+`
+
+type ShiftTaskPositionUpParams struct {
+	UserID     int64  `json:"user_id"`
+	TaskStatus string `json:"task_status"`
+	Position   int64  `json:"position"`
+	Position_2 int64  `json:"position_2"`
+	ID         int64  `json:"id"`
+}
+
+func (q *Queries) ShiftTaskPositionUp(ctx context.Context, arg ShiftTaskPositionUpParams) error {
+	_, err := q.db.Exec(ctx, shiftTaskPositionUp,
+		arg.UserID,
+		arg.TaskStatus,
+		arg.Position,
+		arg.Position_2,
+		arg.ID,
+	)
+	return err
+}
+
 const updateTask = `-- name: UpdateTask :one
 UPDATE tasks
 SET title = $3, updated_at = now()
 WHERE id = $1 AND user_id = $2
-RETURNING id, user_id, subject_id, title, task_status, created_at, updated_at
+RETURNING id, user_id, subject_id, title, task_status, created_at, updated_at, position, description
 `
 
 type UpdateTaskParams struct {
@@ -215,6 +316,44 @@ func (q *Queries) UpdateTask(ctx context.Context, arg UpdateTaskParams) (Task, e
 		&i.TaskStatus,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.Position,
+		&i.Description,
+	)
+	return i, err
+}
+
+const updateTaskPosition = `-- name: UpdateTaskPosition :one
+UPDATE tasks
+SET position = $3, task_status = $4, updated_at = now()
+WHERE id = $1 AND user_id = $2
+RETURNING id, user_id, subject_id, title, task_status, created_at, updated_at, position, description
+`
+
+type UpdateTaskPositionParams struct {
+	ID         int64  `json:"id"`
+	UserID     int64  `json:"user_id"`
+	Position   int64  `json:"position"`
+	TaskStatus string `json:"task_status"`
+}
+
+func (q *Queries) UpdateTaskPosition(ctx context.Context, arg UpdateTaskPositionParams) (Task, error) {
+	row := q.db.QueryRow(ctx, updateTaskPosition,
+		arg.ID,
+		arg.UserID,
+		arg.Position,
+		arg.TaskStatus,
+	)
+	var i Task
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.SubjectID,
+		&i.Title,
+		&i.TaskStatus,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.Position,
+		&i.Description,
 	)
 	return i, err
 }
@@ -223,7 +362,7 @@ const updateTaskStatus = `-- name: UpdateTaskStatus :one
 UPDATE tasks
 SET task_status = $3, updated_at = now()
 WHERE id = $1 AND user_id = $2
-RETURNING id, user_id, subject_id, title, task_status, created_at, updated_at
+RETURNING id, user_id, subject_id, title, task_status, created_at, updated_at, position, description
 `
 
 type UpdateTaskStatusParams struct {
@@ -243,6 +382,8 @@ func (q *Queries) UpdateTaskStatus(ctx context.Context, arg UpdateTaskStatusPara
 		&i.TaskStatus,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.Position,
+		&i.Description,
 	)
 	return i, err
 }

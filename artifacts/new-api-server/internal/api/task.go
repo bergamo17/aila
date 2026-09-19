@@ -12,15 +12,20 @@ import (
 )
 
 type createTaskRequest struct {
-	SubjectID int64  `json:"subject_id" binding:"required,min=1"`
-	Title     string `json:"title" binding:"required"`
+	SubjectID   int64  `json:"subject_id" binding:"required,min=1"`
+	Title       string `json:"title" binding:"required"`
+	Description string `json:"description"`
 }
 
-type createTaskResponse struct {
-	Id         int64  `json:"id"`
-	SubjectID  int64  `json:"subject_id"`
-	TaskStatus string `json:"task_status"`
-	Title      string `json:"title"`
+type taskResponse struct {
+	Id          int64     `json:"id"`
+	SubjectId   int64     `json:"subject_id"`
+	Title       string    `json:"title"`
+	TaskStatus  string    `json:"task_status"`
+	Position    int64     `json:"position"`
+	Description string    `json:"description"`
+	CreatedAt   time.Time `json:"created_at"`
+	UpdatedAt   time.Time `json:"updated_at"`
 }
 
 func (server *Server) createTask(ctx *gin.Context) {
@@ -66,28 +71,27 @@ func (server *Server) createTask(ctx *gin.Context) {
 		return
 	}
 
-	result := &createTaskResponse{
-		Id:         task.ID,
-		SubjectID:  task.SubjectID,
-		TaskStatus: task.TaskStatus,
-		Title:      task.Title,
+	result := &taskResponse{
+		Id:          task.ID,
+		SubjectId:   task.SubjectID,
+		Title:       task.Title,
+		TaskStatus:  task.TaskStatus,
+		Position:    task.Position,
+		Description: task.Description.String,
+		CreatedAt:   task.CreatedAt.Time,
+		UpdatedAt:   task.UpdatedAt.Time,
 	}
 
 	ctx.JSON(http.StatusOK, result)
 }
 
 type updateTaskRequest struct {
-	Title string `json:"title" binding:"required"`
+	Title       string `json:"title" binding:"required"`
+	Description string `json:"description"`
 }
 
 type taskIDUri struct {
 	ID int64 `uri:"id" binding:"required,min=1"`
-}
-
-type updateTaskResponse struct {
-	Title      string    `json:"title"`
-	TaskStatus string    `json:"task_status"`
-	UpdatedAt  time.Time `json:"updated_at"`
 }
 
 func (server *Server) updateTask(ctx *gin.Context) {
@@ -133,16 +137,26 @@ func (server *Server) updateTask(ctx *gin.Context) {
 		return
 	}
 
-	result := &updateTaskResponse{
-		Title:      updatedTask.Title,
-		TaskStatus: updatedTask.TaskStatus,
-		UpdatedAt:  updatedTask.UpdatedAt.Time,
+	result := &taskResponse{
+		Id:          updatedTask.ID,
+		SubjectId:   updatedTask.SubjectID,
+		Title:       updatedTask.Title,
+		TaskStatus:  updatedTask.TaskStatus,
+		Position:    updatedTask.Position,
+		Description: updatedTask.Description.String,
+		CreatedAt:   updatedTask.CreatedAt.Time,
+		UpdatedAt:   updatedTask.UpdatedAt.Time,
 	}
 
 	ctx.JSON(http.StatusOK, result)
 }
 
 type updateTaskStatusRequest struct {
+	Position   int64  `json:"position" binding:"required,min=0"`
+	TaskStatus string `json:"task_status" binding:"required,oneof='to do' 'in progress' 'done'"`
+}
+
+type updateOnlyStatusRequest struct {
 	TaskStatus string `json:"task_status" binding:"required,oneof='to do' 'in progress' 'done'"`
 }
 
@@ -154,7 +168,7 @@ func (server *Server) updateTaskStatus(ctx *gin.Context) {
 		return
 	}
 
-	var req updateTaskStatusRequest
+	var req updateOnlyStatusRequest
 	err = ctx.ShouldBindJSON(&req)
 	if err != nil {
 		ctx.JSON(http.StatusBadRequest, errResponse(err))
@@ -198,10 +212,82 @@ func (server *Server) updateTaskStatus(ctx *gin.Context) {
 		return
 	}
 
-	result := &updateTaskResponse{
-		Title:      updatedTask.Title,
-		TaskStatus: updatedTask.TaskStatus,
-		UpdatedAt:  updatedTask.UpdatedAt.Time,
+	result := &taskResponse{
+		Id:          updatedTask.ID,
+		SubjectId:   updatedTask.SubjectID,
+		Title:       updatedTask.Title,
+		TaskStatus:  updatedTask.TaskStatus,
+		Position:    updatedTask.Position,
+		Description: updatedTask.Description.String,
+		CreatedAt:   updatedTask.CreatedAt.Time,
+		UpdatedAt:   updatedTask.UpdatedAt.Time,
+	}
+
+	ctx.JSON(http.StatusOK, result)
+}
+
+func (server *Server) updateTaskStatusAndPosition(ctx *gin.Context) {
+	var uri taskIDUri
+	err := ctx.ShouldBindUri(&uri)
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, errResponse(err))
+		return
+	}
+
+	var req updateTaskStatusRequest
+	err = ctx.ShouldBindJSON(&req)
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, errResponse(err))
+		return
+	}
+
+	authPayload := ctx.MustGet(authorizationPayloadKey).(*token.Payload)
+
+	user, err := server.store.GetUser(ctx, authPayload.Username)
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			ctx.JSON(http.StatusNotFound, errResponse(err))
+			return
+		}
+		ctx.JSON(http.StatusInternalServerError, errResponse(err))
+		return
+	}
+
+	task, err := server.store.GetTask(ctx, db.GetTaskParams{
+		ID:     uri.ID,
+		UserID: user.ID,
+	})
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			ctx.JSON(http.StatusNotFound, errResponse(err))
+			return
+		}
+		ctx.JSON(http.StatusInternalServerError, errResponse(err))
+		return
+	}
+
+	arg := db.UpdateTaskPositionParams{
+		ID:         uri.ID,
+		UserID:     task.UserID,
+		Position:   req.Position,
+		TaskStatus: req.TaskStatus,
+	}
+
+	updatedTask, err := server.store.UpdateTaskPosition(ctx, arg)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, errResponse(err))
+		return
+	}
+
+	result := &taskResponse{
+		Id:          updatedTask.ID,
+		SubjectId:   updatedTask.SubjectID,
+		Title:       updatedTask.Title,
+		TaskStatus:  updatedTask.TaskStatus,
+		Position:    updatedTask.Position,
+		Description: updatedTask.Description.String,
+		CreatedAt:   updatedTask.CreatedAt.Time,
+		UpdatedAt:   updatedTask.UpdatedAt.Time,
 	}
 
 	ctx.JSON(http.StatusOK, result)
@@ -239,4 +325,44 @@ func (server *Server) deleteTask(ctx *gin.Context) {
 	}
 
 	ctx.JSON(http.StatusOK, gin.H{"message": "Task berhasil dihapus"})
+}
+
+func (server *Server) listMyTasks(ctx *gin.Context) {
+	authPayload := ctx.MustGet(authorizationPayloadKey).(*token.Payload)
+
+	user, err := server.store.GetUser(ctx, authPayload.Username)
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			ctx.JSON(http.StatusNotFound, errResponse(errors.New("User tidak ditemukan")))
+			return
+		}
+		ctx.JSON(http.StatusInternalServerError, errResponse(err))
+		return
+	}
+
+	listTask, err := server.store.ListTasksByUser(ctx, user.ID)
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			ctx.JSON(http.StatusNotFound, errResponse(errors.New("Tasks tidak ditemukan")))
+			return
+		}
+		ctx.JSON(http.StatusInternalServerError, errResponse(err))
+		return
+	}
+
+	result := make([]taskResponse, 0, len(listTask))
+	for _, t := range listTask {
+		result = append(result, taskResponse{
+			Id:          t.ID,
+			SubjectId:   t.SubjectID,
+			Title:       t.Title,
+			TaskStatus:  t.TaskStatus,
+			Position:    t.Position,
+			Description: t.Description.String,
+			CreatedAt:   t.CreatedAt.Time,
+			UpdatedAt:   t.UpdatedAt.Time,
+		})
+	}
+
+	ctx.JSON(http.StatusOK, result)
 }

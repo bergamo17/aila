@@ -4,10 +4,12 @@ import { useQuery } from "@tanstack/react-query";
 import { userApi } from "@/api/user";
 import { Spinner } from "@/components/ui/spinner";
 import { useAuthStore } from "@/lib/auth-store";
+import { useEffect } from "react";
 
 export function ProtectedRoute({ children }: { children: ReactNode }) {
     const [, navigate] = useLocation();
     const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+    const setUser = useAuthStore((state) => state.setUser);
 
     const { data: user, isLoading, isError } = useQuery ({
         queryKey: ["me"],
@@ -15,6 +17,10 @@ export function ProtectedRoute({ children }: { children: ReactNode }) {
         enabled: isAuthenticated,
         retry: false,
     });
+
+    useEffect(() => {
+        if (user) setUser(user);
+    }, [user, setUser]);
 
     if (!isAuthenticated) {
         navigate("/login");

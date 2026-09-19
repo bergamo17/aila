@@ -32,9 +32,13 @@ type Querier interface {
 	ListTaskByStatus(ctx context.Context, arg ListTaskByStatusParams) ([]Task, error)
 	ListTaskBySubject(ctx context.Context, arg ListTaskBySubjectParams) ([]Task, error)
 	ListTaskByUser(ctx context.Context, userID int64) ([]Task, error)
+	ListTasksByUser(ctx context.Context, userID int64) ([]Task, error)
+	ShiftTaskPositionDown(ctx context.Context, arg ShiftTaskPositionDownParams) error
+	ShiftTaskPositionUp(ctx context.Context, arg ShiftTaskPositionUpParams) error
 	UpdateNote(ctx context.Context, arg UpdateNoteParams) (Note, error)
 	UpdateSubject(ctx context.Context, arg UpdateSubjectParams) (Subject, error)
 	UpdateTask(ctx context.Context, arg UpdateTaskParams) (Task, error)
+	UpdateTaskPosition(ctx context.Context, arg UpdateTaskPositionParams) (Task, error)
 	UpdateTaskStatus(ctx context.Context, arg UpdateTaskStatusParams) (Task, error)
 }
 

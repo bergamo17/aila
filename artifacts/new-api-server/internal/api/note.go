@@ -170,7 +170,7 @@ func (server *Server) deleteNote(ctx *gin.Context) {
 }
 
 type listNoteBySubjectRequest struct {
-	SubjectId int64 `uri:"subject_id" binding:"required,min=1"`
+	SubjectId int64 `uri:"id" binding:"required,min=1"`
 }
 
 func (server *Server) listNoteBySubject(ctx *gin.Context) {

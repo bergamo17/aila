@@ -3,12 +3,12 @@ import React, { createContext, useContext, useReducer, useCallback, useMemo } fr
 export type TaskStatus = 'todo' | 'in_progress' | 'done';
 
 export interface Task {
-    id: string;
+    id: number;
+    subjectId: number;
     title: string;
-    description?: string;
-    subjectId?: string;
-    status: TaskStatus;
-    position: number;
+    status: string;
+    position: string;
+    description: string;
     createdAt: string;
     updatedAt: string;
 }
