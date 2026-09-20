@@ -10,7 +10,7 @@ import { fetchTask,
 import type { CreateTaskRequest, UpdateTaskRequest, UpdateTaskStatusRequest, TaskStatus } from "@/types/task";
 import { useAuthStore } from "@/lib/auth-store";
 
-const TASK_KEY =["tasks"];
+export const TASK_KEY =["tasks"];
 
 export function useListTask() {
     const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
@@ -40,10 +40,23 @@ export function useUpdateTask() {
 
 export function useUpdateTaskStatus() {
     const queryClient = useQueryClient();
-    return useMutation<Task, Error, {id: number; newStatus: TaskStatus; position: number}>({
+    return useMutation<Task, Error, {id: number; newStatus: TaskStatus; position: number}, { previousTask?: Task[] }>({
         mutationFn: ({ id, newStatus, position }) =>
             updateTaskStatus(id, { task_status: STATUS_TO_BACKEND[newStatus], position }),
-        onSuccess: () => queryClient.invalidateQueries({ queryKey: TASK_KEY }),
+
+        onMutate: () => ({
+            previousTask: queryClient.getQueryData<Task[]>(TASK_KEY),
+        }),
+
+        onError: (_err, _vars, context) => {
+            if (context?.previousTask) {
+                queryClient.setQueryData(TASK_KEY, context.previousTask);
+            }
+        },
+
+        onSettled: () => {
+            queryClient.invalidateQueries({ queryKey: TASK_KEY });
+        },
     });
 }
 

@@ -154,7 +154,7 @@ func (server *Server) updateTask(ctx *gin.Context) {
 }
 
 type updateTaskStatusRequest struct {
-	Position   int64  `json:"position" binding:"required,min=0"`
+	Position   int64  `json:"position" binding:"gte=0"`
 	TaskStatus string `json:"task_status" binding:"required,oneof='to do' 'in progress' 'done'"`
 }
 

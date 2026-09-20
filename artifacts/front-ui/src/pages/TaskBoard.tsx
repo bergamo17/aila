@@ -3,7 +3,7 @@ import { SortableContext, useSortable, verticalListSortingStrategy } from '@dnd-
 import { useDroppable } from '@dnd-kit/core';
 import { CSS } from '@dnd-kit/utilities';
 import { useMemo, useState } from 'react';
-import { useListTask, useAddTask, useUpdateTaskStatus, useUpdateTask, useDeleteTask } from '@/hooks/use-task';
+import { useListTask, useAddTask, useUpdateTaskStatus, useUpdateTask, useDeleteTask, TASK_KEY } from '@/hooks/use-task';
 import type { TaskStatus } from '@/types/task';
 import type { Task } from '@/api/task';
 import { AddTaskDialog } from '@/components/task-board/task-dialog';
@@ -15,6 +15,7 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Trash2 } from 'lucide-react';
+import { useQueryClient } from '@tanstack/react-query';
 
 const COLUMNS: { id: TaskStatus; label: string }[] = [
     { id: 'todo', label: 'To Do' },
@@ -162,6 +163,7 @@ export default function TaskBoard() {
     const updateStatus = useUpdateTaskStatus();
     const [activeTask, setActiveTask] = useState<Task | null>(null);
     const [selectedTask, setSelectedTask] = useState<Task | null>(null);
+    const queryClient = useQueryClient();
 
     const subjectMap = useMemo(
         () => new Map((subjects ?? []).map((s) => [s.id, s.subject_name])),
@@ -187,11 +189,18 @@ export default function TaskBoard() {
 
         const taskId = active.id as number;
         const targetStatus = over.data.current?.status as TaskStatus | undefined;
+        const targetPosition = over.data.current?.position as number | undefined;
 
         const task = (data ?? []).find((t) => t.id === taskId);
-        if (!task || !targetStatus) return;
+        if (!task || !targetStatus || task.status === targetStatus) return;
 
-        if (task.status === targetStatus) return;
+        const newPosition = targetPosition ?? taskByStatus(targetStatus).length;
+
+        queryClient.setQueryData<Task[]>(TASK_KEY, (old) =>
+            (old ?? []).map((t) =>
+                t.id === taskId ? { ...t, status: targetStatus, position: newPosition } : t
+            )
+        );
 
         updateStatus.mutate({ id: taskId, newStatus: targetStatus, position: task.position });
     };
