@@ -69,6 +69,7 @@ type Task struct {
 	UpdatedAt   pgtype.Timestamptz `json:"updated_at"`
 	Position    int64              `json:"position"`
 	Description pgtype.Text        `json:"description"`
+	Deadline    pgtype.Timestamptz `json:"deadline"`
 }
 
 type User struct {

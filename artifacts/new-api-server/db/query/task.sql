@@ -1,8 +1,8 @@
 -- name: CreateTask :one
 INSERT INTO tasks (
-    user_id, subject_id, title, description
+    user_id, subject_id, title, description, deadline
 ) VALUES (
-    $1, $2, $3, $4
+    $1, $2, $3, $4, $5
 ) RETURNING *;
 
 -- name: GetTask :one
@@ -27,7 +27,7 @@ ORDER BY created_at DESC;
 
 -- name: UpdateTask :one
 UPDATE tasks
-SET title = $3, updated_at = now()
+SET title = $3, description = $4, deadline = $5, updated_at = now()
 WHERE id = $1 AND user_id = $2
 RETURNING *;
 

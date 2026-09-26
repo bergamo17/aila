@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Plus } from 'lucide-react';
+import { Plus, CalendarIcon, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -9,6 +9,11 @@ import {
 import {
     Select, SelectTrigger, SelectValue, SelectContent, SelectItem,
 } from '@/components/ui/select';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar } from '@/components/ui/calendar';
+import { format } from 'date-fns';
+import { id as localeId } from 'date-fns/locale';
+import { cn } from '@/lib/utils';
 import { useAddTask } from '@/hooks/use-task';
 import { useListSubjects } from '@/hooks/use-subject';
 
@@ -17,6 +22,8 @@ export function AddTaskDialog() {
     const [title, setTitle] = useState('');
     const [description, setDescription] = useState('');
     const [subjectId, setSubjectId] = useState<string>('');
+    const [deadline, setDeadline] = useState<Date | undefined>(undefined);
+    const [datePickerOpen, setDatePickerOpen] = useState(false);
 
     const addTask = useAddTask();
     const { data: subjects, isLoading: subjectsLoading } = useListSubjects();
@@ -25,6 +32,7 @@ export function AddTaskDialog() {
         setTitle('');
         setDescription('');
         setSubjectId('');
+        setDeadline(undefined);
     };
 
     const handleSubmit = () => {
@@ -35,6 +43,7 @@ export function AddTaskDialog() {
                 subject_id: Number(subjectId),
                 title: title.trim(),
                 description: description.trim(),
+                deadline: deadline ? deadline.toISOString() : null,
             },
             {
                 onSuccess: () => {
@@ -92,6 +101,51 @@ export function AddTaskDialog() {
                             placeholder="Opsional"
                             rows={3}
                         />
+                    </div>
+
+                    <div className="space-y-1.5">
+                        <label className="text-sm font-medium">Deadline (Opsional)</label>
+                        <Popover open={datePickerOpen} onOpenChange={setDatePickerOpen}>
+                            <PopoverTrigger asChild>
+                                <Button
+                                    variant="outline"
+                                    className={cn(
+                                        "w-full justify-start text-left font-normal",
+                                        !deadline && "text-muted-foreground"
+                                    )}
+                                >
+                                    <CalendarIcon className="mr-2 h-4 w-4" />
+                                    {deadline ? format(deadline, "d MMMM yyyy", { locale: localeId }) : "Pilih tanggal"}
+                                </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto p-0 z-[100]" align="start">
+                                <Calendar
+                                    mode="single"
+                                    selected={deadline}
+                                    onSelect={(date) => {
+                                        setDeadline(date);
+                                        setDatePickerOpen(false); // auto-close setelah pilih tanggal
+                                    }}
+                                    initialFocus
+                                />
+                                {deadline && (
+                                    <div className="p-2 border-t">
+                                        <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            className="w-full text-muted-foreground gap-1.5"
+                                            onClick={() => {
+                                                setDeadline(undefined);
+                                                setDatePickerOpen(false);
+                                            }}
+                                        >
+                                            <X className="h-3.5 w-3.5" />
+                                            Hapus deadline
+                                        </Button>
+                                    </div>
+                                )}
+                            </PopoverContent>
+                        </Popover>
                     </div>
                 </div>
 

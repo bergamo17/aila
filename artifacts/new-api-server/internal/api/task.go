@@ -13,20 +13,41 @@ import (
 )
 
 type createTaskRequest struct {
-	SubjectID   int64  `json:"subject_id" binding:"required,min=1"`
-	Title       string `json:"title" binding:"required"`
-	Description string `json:"description"`
+	SubjectID   int64      `json:"subject_id" binding:"required,min=1"`
+	Title       string     `json:"title" binding:"required"`
+	Description string     `json:"description"`
+	Deadline    *time.Time `json:"deadline"`
 }
 
 type taskResponse struct {
-	Id          int64     `json:"id"`
-	SubjectId   int64     `json:"subject_id"`
-	Title       string    `json:"title"`
-	TaskStatus  string    `json:"task_status"`
-	Position    int64     `json:"position"`
-	Description string    `json:"description"`
-	CreatedAt   time.Time `json:"created_at"`
-	UpdatedAt   time.Time `json:"updated_at"`
+	Id          int64      `json:"id"`
+	SubjectId   int64      `json:"subject_id"`
+	Title       string     `json:"title"`
+	TaskStatus  string     `json:"task_status"`
+	Position    int64      `json:"position"`
+	Description string     `json:"description"`
+	Deadline    *time.Time `json:"deadline"`
+	CreatedAt   time.Time  `json:"created_at"`
+	UpdatedAt   time.Time  `json:"updated_at"`
+}
+
+type updateTaskRequest struct {
+	Title       string     `json:"title" binding:"required"`
+	Description string     `json:"description"`
+	Deadline    *time.Time `json:"deadline"`
+}
+
+type taskIDUri struct {
+	ID int64 `uri:"id" binding:"required,min=1"`
+}
+
+type updateTaskStatusRequest struct {
+	Position   int64  `json:"position" binding:"gte=0"`
+	TaskStatus string `json:"task_status" binding:"required,oneof='to do' 'in progress' 'done'"`
+}
+
+type updateOnlyStatusRequest struct {
+	TaskStatus string `json:"task_status" binding:"required,oneof='to do' 'in progress' 'done'"`
 }
 
 func (server *Server) createTask(ctx *gin.Context) {
@@ -65,6 +86,7 @@ func (server *Server) createTask(ctx *gin.Context) {
 		SubjectID:   subject.ID,
 		Title:       req.Title,
 		Description: pgtype.Text{String: req.Description, Valid: true},
+		Deadline:    pgtype.Timestamptz{Time: *req.Deadline, Valid: true},
 	}
 
 	task, err := server.store.CreateTask(ctx, arg)
@@ -80,6 +102,7 @@ func (server *Server) createTask(ctx *gin.Context) {
 		TaskStatus:  task.TaskStatus,
 		Position:    task.Position,
 		Description: task.Description.String,
+		Deadline:    &task.Deadline.Time,
 		CreatedAt:   task.CreatedAt.Time,
 		UpdatedAt:   task.UpdatedAt.Time,
 	}
@@ -87,13 +110,54 @@ func (server *Server) createTask(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, result)
 }
 
-type updateTaskRequest struct {
-	Title       string `json:"title" binding:"required"`
-	Description string `json:"description"`
-}
+func (server *Server) getTask(ctx *gin.Context) {
+	var uri taskIDUri
+	err := ctx.ShouldBindUri(&uri)
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, errResponse(err))
+		return
+	}
 
-type taskIDUri struct {
-	ID int64 `uri:"id" binding:"required,min=1"`
+	authPayload := ctx.MustGet(authorizationPayloadKey).(*token.Payload)
+
+	user, err := server.store.GetUser(ctx, authPayload.Username)
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			ctx.JSON(http.StatusNotFound, errResponse(err))
+			return
+		}
+		ctx.JSON(http.StatusInternalServerError, errResponse(err))
+		return
+	}
+
+	args := db.GetTaskParams{
+		ID:     uri.ID,
+		UserID: user.ID,
+	}
+
+	task, err := server.store.GetTask(ctx, args)
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			ctx.JSON(http.StatusNotFound, errResponse(errors.New("task not found")))
+			return
+		}
+		ctx.JSON(http.StatusInternalServerError, errResponse(err))
+		return
+	}
+
+	result := &taskResponse{
+		Id:          task.ID,
+		SubjectId:   task.SubjectID,
+		Title:       task.Title,
+		TaskStatus:  task.TaskStatus,
+		Position:    task.Position,
+		Description: task.Description.String,
+		Deadline:    &task.Deadline.Time,
+		CreatedAt:   task.CreatedAt.Time,
+		UpdatedAt:   task.UpdatedAt.Time,
+	}
+
+	ctx.JSON(http.StatusOK, result)
 }
 
 func (server *Server) updateTask(ctx *gin.Context) {
@@ -124,9 +188,11 @@ func (server *Server) updateTask(ctx *gin.Context) {
 	}
 
 	arg := db.UpdateTaskParams{
-		ID:     uri.ID,
-		UserID: user.ID,
-		Title:  req.Title,
+		ID:          uri.ID,
+		UserID:      user.ID,
+		Title:       req.Title,
+		Description: pgtype.Text{String: req.Description, Valid: true},
+		Deadline:    pgtype.Timestamptz{Time: *req.Deadline, Valid: true},
 	}
 
 	updatedTask, err := server.store.UpdateTask(ctx, arg)
@@ -146,20 +212,12 @@ func (server *Server) updateTask(ctx *gin.Context) {
 		TaskStatus:  updatedTask.TaskStatus,
 		Position:    updatedTask.Position,
 		Description: updatedTask.Description.String,
+		Deadline:    &updatedTask.Deadline.Time,
 		CreatedAt:   updatedTask.CreatedAt.Time,
 		UpdatedAt:   updatedTask.UpdatedAt.Time,
 	}
 
 	ctx.JSON(http.StatusOK, result)
-}
-
-type updateTaskStatusRequest struct {
-	Position   int64  `json:"position" binding:"gte=0"`
-	TaskStatus string `json:"task_status" binding:"required,oneof='to do' 'in progress' 'done'"`
-}
-
-type updateOnlyStatusRequest struct {
-	TaskStatus string `json:"task_status" binding:"required,oneof='to do' 'in progress' 'done'"`
 }
 
 func (server *Server) updateTaskStatus(ctx *gin.Context) {
@@ -221,6 +279,7 @@ func (server *Server) updateTaskStatus(ctx *gin.Context) {
 		TaskStatus:  updatedTask.TaskStatus,
 		Position:    updatedTask.Position,
 		Description: updatedTask.Description.String,
+		Deadline:    &updatedTask.Deadline.Time,
 		CreatedAt:   updatedTask.CreatedAt.Time,
 		UpdatedAt:   updatedTask.UpdatedAt.Time,
 	}
@@ -288,6 +347,7 @@ func (server *Server) updateTaskStatusAndPosition(ctx *gin.Context) {
 		TaskStatus:  updatedTask.TaskStatus,
 		Position:    updatedTask.Position,
 		Description: updatedTask.Description.String,
+		Deadline:    &updatedTask.Deadline.Time,
 		CreatedAt:   updatedTask.CreatedAt.Time,
 		UpdatedAt:   updatedTask.UpdatedAt.Time,
 	}
@@ -361,6 +421,7 @@ func (server *Server) listMyTasks(ctx *gin.Context) {
 			TaskStatus:  t.TaskStatus,
 			Position:    t.Position,
 			Description: t.Description.String,
+			Deadline:    &t.Deadline.Time,
 			CreatedAt:   t.CreatedAt.Time,
 			UpdatedAt:   t.UpdatedAt.Time,
 		})

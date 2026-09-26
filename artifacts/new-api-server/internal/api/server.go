@@ -57,6 +57,7 @@ func (server *Server) setupRouter() {
 	authRoutes.GET("/user/notes", server.listNotesByUser)
 	authRoutes.POST("/task/create", server.createTask)
 	authRoutes.PUT("/task/:id", server.updateTask)
+	authRoutes.GET("/task/:id", server.getTask)
 	authRoutes.PUT("/task/status/:id", server.updateTaskStatusAndPosition)
 	authRoutes.PUT("/admin/task/status/:id", server.updateTaskStatus)
 	authRoutes.GET("/task", server.listMyTasks)

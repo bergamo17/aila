@@ -13,17 +13,18 @@ import (
 
 const createTask = `-- name: CreateTask :one
 INSERT INTO tasks (
-    user_id, subject_id, title, description
+    user_id, subject_id, title, description, deadline
 ) VALUES (
-    $1, $2, $3, $4
-) RETURNING id, user_id, subject_id, title, task_status, created_at, updated_at, position, description
+    $1, $2, $3, $4, $5
+) RETURNING id, user_id, subject_id, title, task_status, created_at, updated_at, position, description, deadline
 `
 
 type CreateTaskParams struct {
-	UserID      int64       `json:"user_id"`
-	SubjectID   int64       `json:"subject_id"`
-	Title       string      `json:"title"`
-	Description pgtype.Text `json:"description"`
+	UserID      int64              `json:"user_id"`
+	SubjectID   int64              `json:"subject_id"`
+	Title       string             `json:"title"`
+	Description pgtype.Text        `json:"description"`
+	Deadline    pgtype.Timestamptz `json:"deadline"`
 }
 
 func (q *Queries) CreateTask(ctx context.Context, arg CreateTaskParams) (Task, error) {
@@ -32,6 +33,7 @@ func (q *Queries) CreateTask(ctx context.Context, arg CreateTaskParams) (Task, e
 		arg.SubjectID,
 		arg.Title,
 		arg.Description,
+		arg.Deadline,
 	)
 	var i Task
 	err := row.Scan(
@@ -44,6 +46,7 @@ func (q *Queries) CreateTask(ctx context.Context, arg CreateTaskParams) (Task, e
 		&i.UpdatedAt,
 		&i.Position,
 		&i.Description,
+		&i.Deadline,
 	)
 	return i, err
 }
@@ -64,7 +67,7 @@ func (q *Queries) DeleteTask(ctx context.Context, arg DeleteTaskParams) error {
 }
 
 const getTask = `-- name: GetTask :one
-SELECT id, user_id, subject_id, title, task_status, created_at, updated_at, position, description FROM tasks
+SELECT id, user_id, subject_id, title, task_status, created_at, updated_at, position, description, deadline FROM tasks
 WHERE id = $1 AND user_id = $2
 LIMIT 1
 `
@@ -87,12 +90,13 @@ func (q *Queries) GetTask(ctx context.Context, arg GetTaskParams) (Task, error) 
 		&i.UpdatedAt,
 		&i.Position,
 		&i.Description,
+		&i.Deadline,
 	)
 	return i, err
 }
 
 const listTaskByStatus = `-- name: ListTaskByStatus :many
-SELECT id, user_id, subject_id, title, task_status, created_at, updated_at, position, description FROM tasks
+SELECT id, user_id, subject_id, title, task_status, created_at, updated_at, position, description, deadline FROM tasks
 WHERE user_id = $1 AND task_status = $2
 ORDER BY created_at DESC
 `
@@ -121,6 +125,7 @@ func (q *Queries) ListTaskByStatus(ctx context.Context, arg ListTaskByStatusPara
 			&i.UpdatedAt,
 			&i.Position,
 			&i.Description,
+			&i.Deadline,
 		); err != nil {
 			return nil, err
 		}
@@ -133,7 +138,7 @@ func (q *Queries) ListTaskByStatus(ctx context.Context, arg ListTaskByStatusPara
 }
 
 const listTaskBySubject = `-- name: ListTaskBySubject :many
-SELECT id, user_id, subject_id, title, task_status, created_at, updated_at, position, description FROM tasks
+SELECT id, user_id, subject_id, title, task_status, created_at, updated_at, position, description, deadline FROM tasks
 WHERE subject_id = $1 AND user_id = $2
 ORDER BY created_at DESC
 `
@@ -162,6 +167,7 @@ func (q *Queries) ListTaskBySubject(ctx context.Context, arg ListTaskBySubjectPa
 			&i.UpdatedAt,
 			&i.Position,
 			&i.Description,
+			&i.Deadline,
 		); err != nil {
 			return nil, err
 		}
@@ -174,7 +180,7 @@ func (q *Queries) ListTaskBySubject(ctx context.Context, arg ListTaskBySubjectPa
 }
 
 const listTaskByUser = `-- name: ListTaskByUser :many
-SELECT id, user_id, subject_id, title, task_status, created_at, updated_at, position, description FROM tasks
+SELECT id, user_id, subject_id, title, task_status, created_at, updated_at, position, description, deadline FROM tasks
 WHERE user_id = $1
 ORDER BY created_at DESC
 `
@@ -198,6 +204,7 @@ func (q *Queries) ListTaskByUser(ctx context.Context, userID int64) ([]Task, err
 			&i.UpdatedAt,
 			&i.Position,
 			&i.Description,
+			&i.Deadline,
 		); err != nil {
 			return nil, err
 		}
@@ -210,7 +217,7 @@ func (q *Queries) ListTaskByUser(ctx context.Context, userID int64) ([]Task, err
 }
 
 const listTasksByUser = `-- name: ListTasksByUser :many
-SELECT t.id, t.user_id, t.subject_id, t.title, t.task_status, t.created_at, t.updated_at, t.position, t.description
+SELECT t.id, t.user_id, t.subject_id, t.title, t.task_status, t.created_at, t.updated_at, t.position, t.description, t.deadline
 FROM tasks t
 WHERE t.user_id = $1
 ORDER BY t.task_status, t."position"
@@ -235,6 +242,7 @@ func (q *Queries) ListTasksByUser(ctx context.Context, userID int64) ([]Task, er
 			&i.UpdatedAt,
 			&i.Position,
 			&i.Description,
+			&i.Deadline,
 		); err != nil {
 			return nil, err
 		}
@@ -302,19 +310,27 @@ func (q *Queries) ShiftTaskPositionUp(ctx context.Context, arg ShiftTaskPosition
 
 const updateTask = `-- name: UpdateTask :one
 UPDATE tasks
-SET title = $3, updated_at = now()
+SET title = $3, description = $4, deadline = $5, updated_at = now()
 WHERE id = $1 AND user_id = $2
-RETURNING id, user_id, subject_id, title, task_status, created_at, updated_at, position, description
+RETURNING id, user_id, subject_id, title, task_status, created_at, updated_at, position, description, deadline
 `
 
 type UpdateTaskParams struct {
-	ID     int64  `json:"id"`
-	UserID int64  `json:"user_id"`
-	Title  string `json:"title"`
+	ID          int64              `json:"id"`
+	UserID      int64              `json:"user_id"`
+	Title       string             `json:"title"`
+	Description pgtype.Text        `json:"description"`
+	Deadline    pgtype.Timestamptz `json:"deadline"`
 }
 
 func (q *Queries) UpdateTask(ctx context.Context, arg UpdateTaskParams) (Task, error) {
-	row := q.db.QueryRow(ctx, updateTask, arg.ID, arg.UserID, arg.Title)
+	row := q.db.QueryRow(ctx, updateTask,
+		arg.ID,
+		arg.UserID,
+		arg.Title,
+		arg.Description,
+		arg.Deadline,
+	)
 	var i Task
 	err := row.Scan(
 		&i.ID,
@@ -326,6 +342,7 @@ func (q *Queries) UpdateTask(ctx context.Context, arg UpdateTaskParams) (Task, e
 		&i.UpdatedAt,
 		&i.Position,
 		&i.Description,
+		&i.Deadline,
 	)
 	return i, err
 }
@@ -334,7 +351,7 @@ const updateTaskPosition = `-- name: UpdateTaskPosition :one
 UPDATE tasks
 SET position = $3, task_status = $4, updated_at = now()
 WHERE id = $1 AND user_id = $2
-RETURNING id, user_id, subject_id, title, task_status, created_at, updated_at, position, description
+RETURNING id, user_id, subject_id, title, task_status, created_at, updated_at, position, description, deadline
 `
 
 type UpdateTaskPositionParams struct {
@@ -362,6 +379,7 @@ func (q *Queries) UpdateTaskPosition(ctx context.Context, arg UpdateTaskPosition
 		&i.UpdatedAt,
 		&i.Position,
 		&i.Description,
+		&i.Deadline,
 	)
 	return i, err
 }
@@ -370,7 +388,7 @@ const updateTaskStatus = `-- name: UpdateTaskStatus :one
 UPDATE tasks
 SET task_status = $3, updated_at = now()
 WHERE id = $1 AND user_id = $2
-RETURNING id, user_id, subject_id, title, task_status, created_at, updated_at, position, description
+RETURNING id, user_id, subject_id, title, task_status, created_at, updated_at, position, description, deadline
 `
 
 type UpdateTaskStatusParams struct {
@@ -392,6 +410,7 @@ func (q *Queries) UpdateTaskStatus(ctx context.Context, arg UpdateTaskStatusPara
 		&i.UpdatedAt,
 		&i.Position,
 		&i.Description,
+		&i.Deadline,
 	)
 	return i, err
 }
