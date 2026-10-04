@@ -13,14 +13,17 @@ import (
 type Querier interface {
 	BlockSession(ctx context.Context, id pgtype.UUID) error
 	CreateNote(ctx context.Context, arg CreateNoteParams) (Note, error)
+	CreateSchedule(ctx context.Context, arg CreateScheduleParams) (Schedule, error)
 	CreateSession(ctx context.Context, arg CreateSessionParams) (Session, error)
 	CreateSubject(ctx context.Context, arg CreateSubjectParams) (Subject, error)
 	CreateTask(ctx context.Context, arg CreateTaskParams) (Task, error)
 	CreateUser(ctx context.Context, arg CreateUserParams) (User, error)
 	DeleteNote(ctx context.Context, arg DeleteNoteParams) error
+	DeleteSchedule(ctx context.Context, arg DeleteScheduleParams) error
 	DeleteSubject(ctx context.Context, arg DeleteSubjectParams) error
 	DeleteTask(ctx context.Context, arg DeleteTaskParams) error
 	GetNote(ctx context.Context, arg GetNoteParams) (Note, error)
+	GetScheduleById(ctx context.Context, arg GetScheduleByIdParams) (Schedule, error)
 	GetSession(ctx context.Context, id pgtype.UUID) (Session, error)
 	GetSubjectById(ctx context.Context, id int64) (Subject, error)
 	GetTask(ctx context.Context, arg GetTaskParams) (Task, error)
@@ -28,14 +31,19 @@ type Querier interface {
 	GetUserByEmail(ctx context.Context, email string) (User, error)
 	ListNotesBySubject(ctx context.Context, arg ListNotesBySubjectParams) ([]Note, error)
 	ListNotesByUser(ctx context.Context, userID int64) ([]Note, error)
+	ListScheduleByDate(ctx context.Context, arg ListScheduleByDateParams) ([]Schedule, error)
+	ListScheduleByUserAndDateRange(ctx context.Context, arg ListScheduleByUserAndDateRangeParams) ([]Schedule, error)
 	ListSubjectByUser(ctx context.Context, userID int64) ([]ListSubjectByUserRow, error)
 	ListTaskByStatus(ctx context.Context, arg ListTaskByStatusParams) ([]Task, error)
 	ListTaskBySubject(ctx context.Context, arg ListTaskBySubjectParams) ([]Task, error)
 	ListTaskByUser(ctx context.Context, userID int64) ([]Task, error)
 	ListTasksByUser(ctx context.Context, userID int64) ([]Task, error)
+	ListUpcomingSchedule(ctx context.Context, arg ListUpcomingScheduleParams) ([]Schedule, error)
 	ShiftTaskPositionDown(ctx context.Context, arg ShiftTaskPositionDownParams) error
 	ShiftTaskPositionUp(ctx context.Context, arg ShiftTaskPositionUpParams) error
 	UpdateNote(ctx context.Context, arg UpdateNoteParams) (Note, error)
+	UpdateSchedule(ctx context.Context, arg UpdateScheduleParams) (Schedule, error)
+	UpdateScheduleStatus(ctx context.Context, arg UpdateScheduleStatusParams) (Schedule, error)
 	UpdateSubject(ctx context.Context, arg UpdateSubjectParams) (Subject, error)
 	UpdateTask(ctx context.Context, arg UpdateTaskParams) (Task, error)
 	UpdateTaskPosition(ctx context.Context, arg UpdateTaskPositionParams) (Task, error)

@@ -208,13 +208,14 @@ export default function ScheduleList() {
         <TabsContent value="calendar" className="mt-4">
           <div className="grid grid-cols-1 lg:grid-cols-[400px_1fr] gap-8 items-start">
             <Card className="p-6">
+              <div style={{ '--cell-size': '3.5rem' } as React.CSSProperties}></div>
               <Calendar
                 mode="single"
                 selected={selectedDate}
                 onSelect={(d) => d && setSelectedDate(d)}
                 modifiers={{ hasEvent: (d) => eventDates.has(format(d, 'yyyy-MM-dd')) }}
                 modifiersClassNames={{ hasEvent: 'font-bold text-primary underline underline-offset-4' }}
-                className="w-full [--cell-size:3.5rem]"
+                className="w-full"
               />
             </Card>
 

@@ -37,6 +37,9 @@ type Schedule struct {
 	Reminder    pgtype.Bool        `json:"reminder"`
 	IsCompleted bool               `json:"is_completed"`
 	CreatedAt   pgtype.Timestamptz `json:"created_at"`
+	Type        string             `json:"type"`
+	StartTime   pgtype.Time        `json:"start_time"`
+	EndTime     pgtype.Time        `json:"end_time"`
 }
 
 type Session struct {

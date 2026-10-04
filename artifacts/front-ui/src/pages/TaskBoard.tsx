@@ -7,7 +7,7 @@ import { useListTask, useAddTask, useUpdateTaskStatus, useUpdateTask, useDeleteT
 import type { TaskStatus } from '@/types/task';
 import type { Task } from '@/api/task';
 import { AddTaskDialog } from '@/components/task-board/task-dialog';
-import { formatDistanceToNow } from 'date-fns';
+import { formatDistanceToNow, format } from 'date-fns';
 import { id as localeId } from 'date-fns/locale';
 import { useListSubjects } from '@/hooks/use-subject';
 import {
@@ -16,6 +16,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Trash2 } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
+import { CalendarClock } from 'lucide-react';
 
 const COLUMNS: { id: TaskStatus; label: string }[] = [
     { id: 'todo', label: 'To Do' },
@@ -74,6 +75,16 @@ function TaskCard({ task, subjectName, overlay = false, onOpenDetail }: { task: 
             )}
 
             {/* poin 2: timestamp relatif */}
+            <div className='mt-2 flex items-center gap-1 text-[10px]'>
+                <CalendarClock className='h-3 w-3 text-muted-foreground/70' />
+                {task.deadline ? (
+                    <span className='font-medium text-foreground/80'>
+                        {format(new Date(task.deadline), 'd MMMM yyyy', {locale: localeId})}
+                    </span>
+                ): (
+                    <span className='text-muted-foreground/50 italic'>No deadline</span>
+                )}
+            </div>
             <p className="mt-2 text-[10px] text-muted-foreground/70">
                 {formatDistanceToNow(new Date(task.createdAt), { addSuffix: true, locale: localeId })}
             </p>
