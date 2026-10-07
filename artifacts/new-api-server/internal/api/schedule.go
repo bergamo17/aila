@@ -13,9 +13,9 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
-type createScheduleRequest struct {
+type scheduleRequest struct {
 	SubjectId int64   `json:"subject_id" binding:"required,min=1"`
-	TaskId    *int64  `json:"task_id" binding:"required,min=1"`
+	TaskId    *int64  `json:"task_id" binding:"omitempty,min=1"`
 	Title     string  `json:"title" binding:"required"`
 	EventDate string  `json:"event_date" binding:"required"`
 	Reminder  bool    `json:"reminder"`
@@ -49,10 +49,14 @@ type scheduleDateRange struct {
 	To   string `form:"to" binding:"omitempty,datetime=2006-01-02"`
 }
 
+type scheduleStatus struct {
+	IsCompleted bool `json:"is_completed" binding:"required"`
+}
+
 const maxRangeDays = 92
 
 func (server *Server) createSchedule(ctx *gin.Context) {
-	var req createScheduleRequest
+	var req scheduleRequest
 
 	err := ctx.ShouldBindJSON(&req)
 	if err != nil {
@@ -345,6 +349,203 @@ func (server *Server) listScheduleByUserAndDateRange(ctx *gin.Context) {
 			StartTime: util.FormatClock(s.StartTime),
 			EndTime:   util.FormatClock(s.EndTime),
 		})
+	}
+
+	ctx.JSON(http.StatusOK, result)
+}
+
+func (server *Server) listUpcomingSchedule(ctx *gin.Context) {
+	var req scheduleDateQuery
+
+	err := ctx.ShouldBindQuery(&req)
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, errResponse(err))
+		return
+	}
+
+	authPayload := ctx.MustGet(authorizationPayloadKey).(*token.Payload)
+
+	user, err := server.store.GetUser(ctx, authPayload.Username)
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			ctx.JSON(http.StatusNotFound, errResponse(errors.New("User not found")))
+			return
+		}
+		ctx.JSON(http.StatusInternalServerError, errResponse(err))
+		return
+	}
+
+	date, err := util.ParseDate(&req.Date)
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, errResponse(err))
+		return
+	}
+
+	args := db.ListUpcomingScheduleParams{
+		UserID:    user.ID,
+		EventDate: date,
+	}
+
+	upcomingSchedule, err := server.store.ListUpcomingSchedule(ctx, args)
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			ctx.JSON(http.StatusNotFound, errResponse(errors.New("No upcoming scheduled event")))
+			return
+		}
+		ctx.JSON(http.StatusInternalServerError, errResponse(err))
+		return
+	}
+
+	result := make([]scheduleResponse, 0, len(upcomingSchedule))
+	for _, u := range upcomingSchedule {
+		result = append(result, scheduleResponse{
+			Id:        u.ID,
+			SubjectId: u.SubjectID,
+			TaskId:    &u.TaskID.Int64,
+			Title:     u.Title,
+			EventDate: u.EventDate.Time.Format("2006-01-02"),
+			Reminder:  u.Reminder.Bool,
+			Type:      u.Type,
+			StartTime: util.FormatClock(u.StartTime),
+			EndTime:   util.FormatClock(u.EndTime),
+		})
+	}
+
+	ctx.JSON(http.StatusOK, result)
+}
+
+func (server *Server) updateSchedule(ctx *gin.Context) {
+	var uri schedulerUri
+
+	err := ctx.ShouldBindUri(&uri)
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, errResponse(err))
+		return
+	}
+
+	var req scheduleRequest
+
+	err = ctx.ShouldBindJSON(&req)
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, errResponse(err))
+		return
+	}
+
+	authPayload := ctx.MustGet(authorizationPayloadKey).(*token.Payload)
+
+	user, err := server.store.GetUser(ctx, authPayload.Username)
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			ctx.JSON(http.StatusNotFound, errResponse(errors.New("User not found")))
+			return
+		}
+		ctx.JSON(http.StatusInternalServerError, errResponse(err))
+		return
+	}
+
+	date, err := util.ParseDate(&req.EventDate)
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, errResponse(err))
+		return
+	}
+
+	startTime, err := util.ParseClock(req.StartTime)
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, errResponse(err))
+		return
+	}
+
+	endTime, err := util.ParseClock(req.EndTime)
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, errResponse(err))
+		return
+	}
+
+	args := db.UpdateScheduleParams{
+		ID:        uri.Id,
+		UserID:    user.ID,
+		SubjectID: req.SubjectId,
+		TaskID:    pgtype.Int8{Int64: *req.TaskId, Valid: true},
+		Title:     req.Title,
+		EventDate: date,
+		StartTime: startTime,
+		EndTime:   endTime,
+		Type:      req.Type,
+		Reminder:  pgtype.Bool{Bool: req.Reminder, Valid: true},
+	}
+
+	updatedSchedule, err := server.store.UpdateSchedule(ctx, args)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, errResponse(err))
+		return
+	}
+
+	result := &scheduleResponse{
+		Id:        updatedSchedule.ID,
+		SubjectId: updatedSchedule.SubjectID,
+		TaskId:    &updatedSchedule.TaskID.Int64,
+		Title:     updatedSchedule.Title,
+		EventDate: updatedSchedule.EventDate.Time.Format("2006-01-02"),
+		Reminder:  updatedSchedule.Reminder.Bool,
+		Type:      updatedSchedule.Type,
+		StartTime: util.FormatClock(updatedSchedule.StartTime),
+		EndTime:   util.FormatClock(updatedSchedule.EndTime),
+	}
+
+	ctx.JSON(http.StatusOK, result)
+}
+
+func (server *Server) updateScheduleStatus(ctx *gin.Context) {
+	var uri schedulerUri
+
+	err := ctx.ShouldBindUri(&uri)
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, errResponse(err))
+		return
+	}
+
+	var req scheduleStatus
+
+	err = ctx.ShouldBindJSON(&req)
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, errResponse(err))
+		return
+	}
+
+	authPayload := ctx.MustGet(authorizationPayloadKey).(*token.Payload)
+
+	user, err := server.store.GetUser(ctx, authPayload.Username)
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			ctx.JSON(http.StatusNotFound, errResponse(errors.New("User not found")))
+			return
+		}
+		ctx.JSON(http.StatusInternalServerError, errResponse(err))
+		return
+	}
+
+	args := db.UpdateScheduleStatusParams{
+		ID:          uri.Id,
+		UserID:      user.ID,
+		IsCompleted: req.IsCompleted,
+	}
+
+	updated, err := server.store.UpdateScheduleStatus(ctx, args)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, errResponse(err))
+		return
+	}
+
+	result := scheduleResponse{
+		Id:        updated.ID,
+		SubjectId: updated.SubjectID,
+		TaskId:    &updated.TaskID.Int64,
+		Title:     updated.Title,
+		EventDate: updated.EventDate.Time.Format("2006-01-02"),
+		Reminder:  updated.Reminder.Bool,
+		Type:      updated.Type,
+		StartTime: util.FormatClock(updated.StartTime),
+		EndTime:   util.FormatClock(updated.EndTime),
 	}
 
 	ctx.JSON(http.StatusOK, result)

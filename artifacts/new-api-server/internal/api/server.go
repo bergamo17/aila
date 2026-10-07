@@ -65,8 +65,11 @@ func (server *Server) setupRouter() {
 	authRoutes.POST("/schedule", server.createSchedule)
 	authRoutes.GET("/schedule/:id", server.getScheduleById)
 	authRoutes.GET("/schedule", server.listScheduleByDate)
+	authRoutes.GET("/schedule/upcoming", server.listUpcomingSchedule)
+	authRoutes.PUT("/schedule/:id", server.updateSchedule)
+	authRoutes.PUT("/schedule/:id/status", server.updateScheduleStatus)
 	authRoutes.GET("/schedule/range", server.listScheduleByUserAndDateRange)
-	authRoutes.DELETE("/schedule", server.deleteSchedule)
+	authRoutes.DELETE("/schedule/:id", server.deleteSchedule)
 	authRoutes.POST("/user/logout", server.logoutUser)
 	authRoutes.GET("/user/me", server.getMe)
 
