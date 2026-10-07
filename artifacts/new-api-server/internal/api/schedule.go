@@ -19,21 +19,22 @@ type scheduleRequest struct {
 	Title     string  `json:"title" binding:"required"`
 	EventDate string  `json:"event_date" binding:"required"`
 	Reminder  bool    `json:"reminder"`
-	Type      string  `json:"type" binding:"required"`
+	Type      string  `json:"type" binding:"required,oneof=task exam study_session reminder"`
 	StartTime *string `json:"start_time"`
 	EndTime   *string `json:"end_time"`
 }
 
 type scheduleResponse struct {
-	Id        int64   `json:"id"`
-	SubjectId int64   `json:"subject_id"`
-	TaskId    *int64  `json:"task_id"`
-	Title     string  `json:"title"`
-	EventDate string  `json:"event_date"`
-	Reminder  bool    `json:"reminder"`
-	Type      string  `json:"type"`
-	StartTime *string `json:"start_time"`
-	EndTime   *string `json:"end_time"`
+	Id          int64   `json:"id"`
+	SubjectId   int64   `json:"subject_id"`
+	TaskId      *int64  `json:"task_id"`
+	Title       string  `json:"title"`
+	EventDate   string  `json:"event_date"`
+	Reminder    bool    `json:"reminder"`
+	Type        string  `json:"type"`
+	IsCompleted bool    `json:"is_completed"`
+	StartTime   *string `json:"start_time"`
+	EndTime     *string `json:"end_time"`
 }
 
 type schedulerUri struct {
@@ -50,10 +51,31 @@ type scheduleDateRange struct {
 }
 
 type scheduleStatus struct {
-	IsCompleted bool `json:"is_completed" binding:"required"`
+	IsCompleted *bool `json:"is_completed" binding:"required"`
 }
 
 const maxRangeDays = 92
+
+func formatedScheduleResponse(s db.Schedule) scheduleResponse {
+	var taskId *int64
+	if s.TaskID.Valid {
+		id := s.TaskID.Int64
+		taskId = &id
+	}
+
+	return scheduleResponse{
+		Id:          s.ID,
+		SubjectId:   s.SubjectID,
+		TaskId:      taskId,
+		Title:       s.Title,
+		EventDate:   s.EventDate.Time.Format("2006-01-02"),
+		Reminder:    s.Reminder.Bool,
+		Type:        s.Type,
+		IsCompleted: s.IsCompleted,
+		StartTime:   util.FormatClock(s.StartTime),
+		EndTime:     util.FormatClock(s.EndTime),
+	}
+}
 
 func (server *Server) createSchedule(ctx *gin.Context) {
 	var req scheduleRequest
@@ -95,10 +117,50 @@ func (server *Server) createSchedule(ctx *gin.Context) {
 		return
 	}
 
+	subject, err := server.store.GetSubjectById(ctx, req.SubjectId)
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			ctx.JSON(http.StatusNotFound, errResponse(errors.New("Subject not found")))
+			return
+		}
+		ctx.JSON(http.StatusInternalServerError, errResponse(err))
+		return
+	}
+
+	if user.ID != subject.UserID {
+		ctx.JSON(http.StatusUnauthorized, errResponse(errors.New("You don't have the access to this subject")))
+		return
+	}
+
+	var taskId pgtype.Int8
+
+	if req.TaskId != nil {
+		task, err := server.store.GetTask(ctx, db.GetTaskParams{
+			ID:     *req.TaskId,
+			UserID: user.ID,
+		})
+
+		if err != nil {
+			if err == pgx.ErrNoRows {
+				ctx.JSON(http.StatusNotFound, errResponse(errors.New("Task not found")))
+				return
+			}
+			ctx.JSON(http.StatusInternalServerError, errResponse(err))
+			return
+		}
+
+		if task.SubjectID != req.SubjectId {
+			ctx.JSON(http.StatusBadRequest, errResponse(errors.New("Task does not belong to the selected subject")))
+			return
+		}
+
+		taskId = pgtype.Int8{Int64: *req.TaskId, Valid: true}
+	}
+
 	arg := db.CreateScheduleParams{
 		UserID:    user.ID,
 		SubjectID: req.SubjectId,
-		TaskID:    pgtype.Int8{Int64: *req.TaskId, Valid: true},
+		TaskID:    taskId,
 		Title:     req.Title,
 		EventDate: pgtype.Date{Time: eventDate, Valid: true},
 		Reminder:  pgtype.Bool{Bool: req.Reminder, Valid: true},
@@ -113,17 +175,7 @@ func (server *Server) createSchedule(ctx *gin.Context) {
 		return
 	}
 
-	result := &scheduleResponse{
-		Id:        schedule.ID,
-		SubjectId: schedule.SubjectID,
-		TaskId:    &schedule.TaskID.Int64,
-		Title:     schedule.Title,
-		EventDate: schedule.EventDate.Time.Format("2006-01-02"),
-		Reminder:  schedule.Reminder.Bool,
-		Type:      schedule.Type,
-		StartTime: util.FormatClock(startTime),
-		EndTime:   util.FormatClock(endTime),
-	}
+	result := formatedScheduleResponse(schedule)
 
 	ctx.JSON(http.StatusOK, result)
 }
@@ -164,17 +216,7 @@ func (server *Server) getScheduleById(ctx *gin.Context) {
 		return
 	}
 
-	result := &scheduleResponse{
-		Id:        schedule.ID,
-		SubjectId: schedule.SubjectID,
-		TaskId:    &schedule.TaskID.Int64,
-		Title:     schedule.Title,
-		EventDate: schedule.EventDate.Time.Format("2006-01-02"),
-		Reminder:  schedule.Reminder.Bool,
-		Type:      schedule.Type,
-		StartTime: util.FormatClock(schedule.StartTime),
-		EndTime:   util.FormatClock(schedule.EndTime),
-	}
+	result := formatedScheduleResponse(schedule)
 
 	ctx.JSON(http.StatusOK, result)
 }
@@ -258,17 +300,7 @@ func (server *Server) listScheduleByDate(ctx *gin.Context) {
 
 	result := make([]scheduleResponse, 0, len(list))
 	for _, s := range list {
-		result = append(result, scheduleResponse{
-			Id:        s.ID,
-			SubjectId: s.SubjectID,
-			TaskId:    &s.TaskID.Int64,
-			Title:     s.Title,
-			EventDate: s.EventDate.Time.Format("2006-01-02"),
-			Reminder:  s.Reminder.Bool,
-			Type:      s.Type,
-			StartTime: util.FormatClock(s.StartTime),
-			EndTime:   util.FormatClock(s.EndTime),
-		})
+		result = append(result, formatedScheduleResponse(s))
 	}
 
 	ctx.JSON(http.StatusOK, result)
@@ -338,17 +370,7 @@ func (server *Server) listScheduleByUserAndDateRange(ctx *gin.Context) {
 
 	result := make([]scheduleResponse, 0, len(list))
 	for _, s := range list {
-		result = append(result, scheduleResponse{
-			Id:        s.ID,
-			SubjectId: s.SubjectID,
-			TaskId:    &s.TaskID.Int64,
-			Title:     s.Title,
-			EventDate: s.EventDate.Time.Format("2006-01-02"),
-			Reminder:  s.Reminder.Bool,
-			Type:      s.Type,
-			StartTime: util.FormatClock(s.StartTime),
-			EndTime:   util.FormatClock(s.EndTime),
-		})
+		result = append(result, formatedScheduleResponse(s))
 	}
 
 	ctx.JSON(http.StatusOK, result)
@@ -398,17 +420,7 @@ func (server *Server) listUpcomingSchedule(ctx *gin.Context) {
 
 	result := make([]scheduleResponse, 0, len(upcomingSchedule))
 	for _, u := range upcomingSchedule {
-		result = append(result, scheduleResponse{
-			Id:        u.ID,
-			SubjectId: u.SubjectID,
-			TaskId:    &u.TaskID.Int64,
-			Title:     u.Title,
-			EventDate: u.EventDate.Time.Format("2006-01-02"),
-			Reminder:  u.Reminder.Bool,
-			Type:      u.Type,
-			StartTime: util.FormatClock(u.StartTime),
-			EndTime:   util.FormatClock(u.EndTime),
-		})
+		result = append(result, formatedScheduleResponse(u))
 	}
 
 	ctx.JSON(http.StatusOK, result)
@@ -461,11 +473,56 @@ func (server *Server) updateSchedule(ctx *gin.Context) {
 		return
 	}
 
+	if startTime.Valid && endTime.Valid && endTime.Microseconds <= startTime.Microseconds {
+		ctx.JSON(http.StatusBadRequest, errResponse(errors.New("End time must be greater or equal than start time")))
+		return
+	}
+
+	subject, err := server.store.GetSubjectById(ctx, req.SubjectId)
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			ctx.JSON(http.StatusNotFound, errResponse(errors.New("Subject not found")))
+			return
+		}
+		ctx.JSON(http.StatusInternalServerError, errResponse(err))
+		return
+	}
+
+	if user.ID != subject.UserID {
+		ctx.JSON(http.StatusUnauthorized, errResponse(errors.New("You don't have the access to this subject")))
+		return
+	}
+
+	var taskId pgtype.Int8
+
+	if req.TaskId != nil {
+		task, err := server.store.GetTask(ctx, db.GetTaskParams{
+			ID:     *req.TaskId,
+			UserID: user.ID,
+		})
+
+		if err != nil {
+			if err == pgx.ErrNoRows {
+				ctx.JSON(http.StatusNotFound, errResponse(errors.New("Task not found")))
+				return
+			}
+			ctx.JSON(http.StatusInternalServerError, errResponse(err))
+			return
+		}
+
+		if task.SubjectID != req.SubjectId {
+			ctx.JSON(http.StatusBadRequest, errResponse(errors.New("Task does not belong to the selected subject")))
+			return
+		}
+
+		taskId = pgtype.Int8{Int64: *req.TaskId, Valid: true}
+	}
+
 	args := db.UpdateScheduleParams{
 		ID:        uri.Id,
 		UserID:    user.ID,
 		SubjectID: req.SubjectId,
-		TaskID:    pgtype.Int8{Int64: *req.TaskId, Valid: true},
+		TaskID:    taskId,
 		Title:     req.Title,
 		EventDate: date,
 		StartTime: startTime,
@@ -476,21 +533,15 @@ func (server *Server) updateSchedule(ctx *gin.Context) {
 
 	updatedSchedule, err := server.store.UpdateSchedule(ctx, args)
 	if err != nil {
+		if err == pgx.ErrNoRows {
+			ctx.JSON(http.StatusNotFound, errResponse(errors.New("Schedule not found")))
+			return
+		}
 		ctx.JSON(http.StatusInternalServerError, errResponse(err))
 		return
 	}
 
-	result := &scheduleResponse{
-		Id:        updatedSchedule.ID,
-		SubjectId: updatedSchedule.SubjectID,
-		TaskId:    &updatedSchedule.TaskID.Int64,
-		Title:     updatedSchedule.Title,
-		EventDate: updatedSchedule.EventDate.Time.Format("2006-01-02"),
-		Reminder:  updatedSchedule.Reminder.Bool,
-		Type:      updatedSchedule.Type,
-		StartTime: util.FormatClock(updatedSchedule.StartTime),
-		EndTime:   util.FormatClock(updatedSchedule.EndTime),
-	}
+	result := formatedScheduleResponse(updatedSchedule)
 
 	ctx.JSON(http.StatusOK, result)
 }
@@ -527,26 +578,20 @@ func (server *Server) updateScheduleStatus(ctx *gin.Context) {
 	args := db.UpdateScheduleStatusParams{
 		ID:          uri.Id,
 		UserID:      user.ID,
-		IsCompleted: req.IsCompleted,
+		IsCompleted: *req.IsCompleted,
 	}
 
 	updated, err := server.store.UpdateScheduleStatus(ctx, args)
 	if err != nil {
+		if err == pgx.ErrNoRows {
+			ctx.JSON(http.StatusNotFound, errResponse(errors.New("Schedule not found")))
+			return
+		}
 		ctx.JSON(http.StatusInternalServerError, errResponse(err))
 		return
 	}
 
-	result := scheduleResponse{
-		Id:        updated.ID,
-		SubjectId: updated.SubjectID,
-		TaskId:    &updated.TaskID.Int64,
-		Title:     updated.Title,
-		EventDate: updated.EventDate.Time.Format("2006-01-02"),
-		Reminder:  updated.Reminder.Bool,
-		Type:      updated.Type,
-		StartTime: util.FormatClock(updated.StartTime),
-		EndTime:   util.FormatClock(updated.EndTime),
-	}
+	result := formatedScheduleResponse(updated)
 
 	ctx.JSON(http.StatusOK, result)
 }
