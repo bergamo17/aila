@@ -252,14 +252,37 @@ func (server *Server) deleteSchedule(ctx *gin.Context) {
 		return
 	}
 
+	schedule, err := server.store.GetScheduleById(ctx, db.GetScheduleByIdParams{
+		ID:     req.Id,
+		UserID: user.ID,
+	})
+
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			ctx.JSON(http.StatusNotFound, errResponse(errors.New("Scheduled event not found")))
+			return
+		}
+		ctx.JSON(http.StatusInternalServerError, errResponse(err))
+		return
+	}
+
 	args := db.DeleteScheduleParams{
 		ID:     req.Id,
 		UserID: user.ID,
 	}
 
-	err = server.store.DeleteSchedule(ctx, args)
+	txArg := db.DeleteScheduleTxParams{Schedule: args}
+
+	if schedule.TaskID.Valid && (schedule.Type == "task" || schedule.Type == "exam") {
+		txArg.Task = &db.DeleteTaskParams{
+			ID:     schedule.TaskID.Int64,
+			UserID: user.ID,
+		}
+	}
+
+	err = server.store.DeleteScheduleTx(ctx, txArg)
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, errResponse(errors.New("Failed to delete schedule")))
+		ctx.JSON(http.StatusInternalServerError, errResponse(err))
 		return
 	}
 

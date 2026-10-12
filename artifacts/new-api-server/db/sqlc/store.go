@@ -9,7 +9,8 @@ import (
 
 type Store interface {
 	Querier
-	CreateScheduleTx(ctx context.Context, arg CreateScheduleTxParams) (CreateScheduleTxResult, error)
+	CreateScheduleTx(ctx context.Context, arg CreateScheduleTxParams) (ScheduleTxResult, error)
+	DeleteScheduleTx(ctx context.Context, arg DeleteScheduleTxParams) error
 }
 
 type SQLStore struct {
