@@ -2,19 +2,26 @@ import React, { useMemo, useState } from 'react';
 import { z } from 'zod';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { format, parseISO } from 'date-fns';
+import { format, parseISO, startOfMonth, endOfMonth } from 'date-fns';
 import { id as localeId } from 'date-fns/locale';
 
 import {
-  useListEvents, useCreateEvent, useUpdateEvent, useDeleteEvent, type EventType,
-} from '@/lib/schedule-store';
-import { useListSubjects } from '@/lib/workspace-store';
+  useScheduleByRange,
+  useUpcomingSchedule,
+  useAddSchedule,
+  useUpdateScheduleStatus,
+  useDeleteSchedule,
+} from '@/hooks/use-schedule';
+import { useListSubjects } from '@/hooks/use-subject';
+import type { EventType, ScheduleResponse } from '@/types/schedule';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Switch } from '@/components/ui/switch';
 import { Calendar } from '@/components/ui/calendar';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import {
@@ -35,8 +42,6 @@ import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 
-const NONE_SUBJECT = '__none__';
-
 const TYPE_META: Record<EventType, { label: string; icon: React.ElementType; color: string }> = {
   task: { label: 'Tugas', icon: CheckSquare, color: '#3b82f6' },
   exam: { label: 'Ujian', icon: FileWarning, color: '#ef4444' },
@@ -44,62 +49,85 @@ const TYPE_META: Record<EventType, { label: string; icon: React.ElementType; col
   reminder: { label: 'Reminder', icon: Bell, color: '#f59e0b' },
 };
 
+// Backend bisa mengirim "2026-10-11" atau "2026-10-11T00:00:00Z", dan jam "HH:MM:SS".
+// Dinormalisasi supaya perbandingan dan tampilan tetap konsisten.
+const dayKey = (s: string) => s.slice(0, 10);
+const hhmm = (s?: string | null) => (s ? s.slice(0, 5) : '');
+
 const eventSchema = z.object({
   title: z.string().min(1, 'Judul wajib diisi'),
-  date: z.string().min(1, 'Tanggal wajib diisi'),
-  startTime: z.string().optional(),
-  endTime: z.string().optional(),
+  event_date: z.string().min(1, 'Tanggal wajib diisi'),
+  start_time: z.string().optional(),
+  end_time: z.string().optional(),
   type: z.enum(['task', 'exam', 'study_session', 'reminder']),
-  subjectId: z.string().optional(),
+  subject_id: z.string().min(1, 'Subject wajib dipilih'),
+  reminder: z.boolean(),
+  description: z.string().optional(),
 });
 type EventFormValues = z.infer<typeof eventSchema>;
 
 export default function ScheduleList() {
   const { toast } = useToast();
-  const { data } = useListEvents();
-  const { data: subjectsData } = useListSubjects();
-  const createMutation = useCreateEvent();
-  const updateMutation = useUpdateEvent();
-  const deleteMutation = useDeleteEvent();
 
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  const [month, setMonth] = useState<Date>(new Date());
   const [isFormOpen, setIsFormOpen] = useState(false);
+
+  // Kalender: ambil jadwal untuk bulan yang sedang ditampilkan
+  const rangeFrom = format(startOfMonth(month), 'yyyy-MM-dd');
+  const rangeTo = format(endOfMonth(month), 'yyyy-MM-dd');
+  const { data: monthEvents = [] } = useScheduleByRange(rangeFrom, rangeTo);
+
+  // Agenda: jadwal yang akan datang, dihitung dari hari ini
+  const today = useMemo(() => format(new Date(), 'yyyy-MM-dd'), []);
+  const { data: upcomingEvents = [] } = useUpcomingSchedule(today);
+
+  const { data: subjects = [] } = useListSubjects();
+  const createMutation = useAddSchedule();
+  const statusMutation = useUpdateScheduleStatus();
+  const deleteMutation = useDeleteSchedule();
 
   const form = useForm<EventFormValues>({
     resolver: zodResolver(eventSchema),
     defaultValues: {
-      title: '', date: format(new Date(), 'yyyy-MM-dd'),
-      startTime: '', endTime: '', type: 'task', subjectId: NONE_SUBJECT,
+      title: '', event_date: format(new Date(), 'yyyy-MM-dd'),
+      start_time: '', end_time: '', type: 'task', subject_id: '', reminder: false,
+      description: '',
     },
   });
 
-  const subjectName = (id?: string) =>
-    subjectsData?.data.find((s) => s.id === id)?.name;
+  // Deskripsi hanya relevan untuk tipe yang otomatis membuat task di board
+  const watchedType = form.watch('type');
+  const createsTask = watchedType === 'task' || watchedType === 'exam';
 
-  // Dates that have at least one event -> highlighted on calendar
+  const subjectName = (id: number) =>
+    subjects.find((s) => s.id === id)?.subject_name;
+
+  // Tanggal yang punya minimal satu jadwal -> di-highlight di kalender
   const eventDates = useMemo(
-    () => new Set(data.data.map((e) => e.date)),
-    [data.data],
+    () => new Set(monthEvents.map((e) => dayKey(e.event_date))),
+    [monthEvents],
   );
 
   const eventsOnSelectedDate = useMemo(() => {
     const key = format(selectedDate, 'yyyy-MM-dd');
-    return data.data.filter((e) => e.date === key);
-  }, [data.data, selectedDate]);
+    return monthEvents.filter((e) => dayKey(e.event_date) === key);
+  }, [monthEvents, selectedDate]);
 
   const groupedForAgenda = useMemo(() => {
-    const groups: Record<string, typeof data.data> = {};
-    for (const e of data.data) {
-      (groups[e.date] ??= []).push(e);
+    const groups: Record<string, ScheduleResponse[]> = {};
+    for (const e of upcomingEvents) {
+      (groups[dayKey(e.event_date)] ??= []).push(e);
     }
     return Object.entries(groups).sort(([a], [b]) => a.localeCompare(b));
-  }, [data.data]);
+  }, [upcomingEvents]);
 
   const openCreateForm = (presetDate?: Date) => {
     form.reset({
       title: '',
-      date: format(presetDate ?? selectedDate, 'yyyy-MM-dd'),
-      startTime: '', endTime: '', type: 'task', subjectId: NONE_SUBJECT,
+      event_date: format(presetDate ?? selectedDate, 'yyyy-MM-dd'),
+      start_time: '', end_time: '', type: 'task', subject_id: '', reminder: false,
+      description: '',
     });
     setIsFormOpen(true);
   };
@@ -107,38 +135,48 @@ export default function ScheduleList() {
   const onSubmit = (values: EventFormValues) => {
     createMutation.mutate(
       {
-        data: {
-          title: values.title,
-          date: values.date,
-          startTime: values.startTime || undefined,
-          endTime: values.endTime || undefined,
-          type: values.type,
-          subjectId: values.subjectId === NONE_SUBJECT ? undefined : values.subjectId,
-        },
+        subject_id: Number(values.subject_id),
+        title: values.title,
+        event_date: values.event_date,
+        reminder: values.reminder,
+        type: values.type,
+        description: values.description?.trim() || '',
+        start_time: values.start_time || null,
+        end_time: values.end_time || null,
       },
       {
-        onSuccess: () => {
-          toast({ title: 'Jadwal berhasil ditambahkan' });
+        onSuccess: (res) => {
+          toast({
+            title: res.task_id
+              ? 'Jadwal ditambahkan & masuk ke To Do di Task'
+              : 'Jadwal berhasil ditambahkan',
+          });
           setIsFormOpen(false);
         },
+        onError: () => toast({ title: 'Gagal menambahkan jadwal', variant: 'destructive' }),
       },
     );
   };
 
-  const toggleStatus = (id: string, current: 'pending' | 'completed') => {
-    updateMutation.mutate({ id, data: { status: current === 'pending' ? 'completed' : 'pending' } });
+  const toggleStatus = (e: ScheduleResponse) => {
+    statusMutation.mutate(
+      { id: e.id, payload: { is_completed: !e.is_completed } },
+      { onError: () => toast({ title: 'Gagal mengubah status', variant: 'destructive' }) },
+    );
   };
 
-  const renderEventRow = (e: (typeof data.data)[number]) => {
-    const meta = TYPE_META[e.type];
+  const renderEventRow = (e: ScheduleResponse) => {
+    const meta = TYPE_META[e.type as EventType] ?? TYPE_META.reminder;
     const Icon = meta.icon;
+    const name = subjectName(e.subject_id);
+    const start = hhmm(e.start_time);
+    const end = hhmm(e.end_time);
     return (
       <Card key={e.id} className="p-2.5 hover-elevate transition-all">
         <div className="flex items-start gap-2.5">
           <Checkbox
-            checked={e.status === 'completed'}
-            onCheckedChange={() => toggleStatus(e.id, e.status)}
-            //className="mt-1"
+            checked={e.is_completed}
+            onCheckedChange={() => toggleStatus(e)}
           />
           <div
             className="w-8 h-8 rounded-md flex items-center justify-center shrink-0"
@@ -148,18 +186,19 @@ export default function ScheduleList() {
             <Icon className="w-4 h-4" />
           </div>
           <div className="min-w-0 flex-1">
-            <p className={`font-medium truncate ${e.status === 'completed' ? 'line-through text-muted-foreground' : ''}`}>
+            <p className={`font-medium truncate ${e.is_completed ? 'line-through text-muted-foreground' : ''}`}>
               {e.title}
             </p>
             <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
-              {e.subjectId && subjectName(e.subjectId) && (
-                <Badge variant="secondary" className="text-[10px] font-normal">{subjectName(e.subjectId)}</Badge>
+              {name && (
+                <Badge variant="secondary" className="text-[10px] font-normal">{name}</Badge>
               )}
-              {(e.startTime || e.endTime) && (
+              {(start || end) && (
                 <span className="text-[10px] text-muted-foreground font-mono">
-                  {e.startTime}{e.endTime ? ` - ${e.endTime}` : ''}
+                  {start}{end ? ` - ${end}` : ''}
                 </span>
               )}
+              {e.reminder && <Bell className="w-3 h-3 text-muted-foreground" />}
             </div>
           </div>
           <DropdownMenu>
@@ -171,7 +210,7 @@ export default function ScheduleList() {
             <DropdownMenuContent align="end">
               <DropdownMenuItem
                 onClick={() => deleteMutation.mutate(
-                  { id: e.id },
+                  e.id,
                   { onSuccess: () => toast({ title: 'Jadwal dihapus' }) },
                 )}
                 className="cursor-pointer text-destructive focus:bg-destructive focus:text-destructive-foreground"
@@ -212,7 +251,13 @@ export default function ScheduleList() {
               <Calendar
                 mode="single"
                 selected={selectedDate}
-                onSelect={(d) => d && setSelectedDate(d)}
+                onSelect={(d) => {
+                  if (!d) return;
+                  setSelectedDate(d);
+                  setMonth(d);
+                }}
+                month={month}
+                onMonthChange={setMonth}
                 modifiers={{ hasEvent: (d) => eventDates.has(format(d, 'yyyy-MM-dd')) }}
                 modifiersClassNames={{ hasEvent: 'font-bold text-primary underline underline-offset-4' }}
                 className="w-full"
@@ -280,7 +325,7 @@ export default function ScheduleList() {
               <div className="grid grid-cols-2 gap-4">
                 <FormField
                   control={form.control}
-                  name="date"
+                  name="event_date"
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Tanggal</FormLabel>
@@ -314,7 +359,7 @@ export default function ScheduleList() {
               <div className="grid grid-cols-2 gap-4">
                 <FormField
                   control={form.control}
-                  name="startTime"
+                  name="start_time"
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Jam Mulai (opsional)</FormLabel>
@@ -325,7 +370,7 @@ export default function ScheduleList() {
                 />
                 <FormField
                   control={form.control}
-                  name="endTime"
+                  name="end_time"
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Jam Selesai (opsional)</FormLabel>
@@ -338,22 +383,62 @@ export default function ScheduleList() {
 
               <FormField
                 control={form.control}
-                name="subjectId"
+                name="subject_id"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Subject (opsional)</FormLabel>
+                    <FormLabel>Subject</FormLabel>
                     <Select onValueChange={field.onChange} value={field.value}>
                       <FormControl>
-                        <SelectTrigger><SelectValue placeholder="Tidak terkait subject" /></SelectTrigger>
+                        <SelectTrigger><SelectValue placeholder="Pilih subject" /></SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value={NONE_SUBJECT}>Tidak ada</SelectItem>
-                        {subjectsData?.data.map((s) => (
-                          <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+                        {subjects.map((s) => (
+                          <SelectItem key={s.id} value={String(s.id)}>{s.subject_name}</SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
+                    {subjects.length === 0 && (
+                      <p className="text-xs text-muted-foreground">
+                        Belum ada subject. Buat Mata Kuliah dulu sebelum menambah jadwal.
+                      </p>
+                    )}
                     <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              {createsTask && (
+                <FormField
+                  control={form.control}
+                  name="description"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Deskripsi Task (opsional)</FormLabel>
+                      <FormControl>
+                        <Textarea
+                          placeholder="e.g. Kerjakan soal halaman 11-12"
+                          rows={3}
+                          {...field}
+                        />
+                      </FormControl>
+                      <p className="text-xs text-muted-foreground">
+                        Akan tampil di kartu task pada board To Do.
+                      </p>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              )}
+
+              <FormField
+                control={form.control}
+                name="reminder"
+                render={({ field }) => (
+                  <FormItem className="flex items-center justify-between rounded-md border p-3">
+                    <FormLabel className="m-0">Ingatkan saya</FormLabel>
+                    <FormControl>
+                      <Switch checked={field.value} onCheckedChange={field.onChange} />
+                    </FormControl>
                   </FormItem>
                 )}
               />

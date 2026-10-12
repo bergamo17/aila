@@ -14,14 +14,15 @@ import (
 )
 
 type scheduleRequest struct {
-	SubjectId int64   `json:"subject_id" binding:"required,min=1"`
-	TaskId    *int64  `json:"task_id" binding:"omitempty,min=1"`
-	Title     string  `json:"title" binding:"required"`
-	EventDate string  `json:"event_date" binding:"required"`
-	Reminder  bool    `json:"reminder"`
-	Type      string  `json:"type" binding:"required,oneof=task exam study_session reminder"`
-	StartTime *string `json:"start_time"`
-	EndTime   *string `json:"end_time"`
+	SubjectId   int64   `json:"subject_id" binding:"required,min=1"`
+	TaskId      *int64  `json:"task_id" binding:"omitempty,min=1"`
+	Title       string  `json:"title" binding:"required"`
+	Description string  `json:"description" binding:"omitempty"`
+	EventDate   string  `json:"event_date" binding:"required"`
+	Reminder    bool    `json:"reminder"`
+	Type        string  `json:"type" binding:"required,oneof=task exam study_session reminder"`
+	StartTime   *string `json:"start_time"`
+	EndTime     *string `json:"end_time"`
 }
 
 type scheduleResponse struct {
@@ -139,7 +140,6 @@ func (server *Server) createSchedule(ctx *gin.Context) {
 			ID:     *req.TaskId,
 			UserID: user.ID,
 		})
-
 		if err != nil {
 			if err == pgx.ErrNoRows {
 				ctx.JSON(http.StatusNotFound, errResponse(errors.New("Task not found")))
@@ -169,15 +169,25 @@ func (server *Server) createSchedule(ctx *gin.Context) {
 		EndTime:   endTime,
 	}
 
-	schedule, err := server.store.CreateSchedule(ctx, arg)
+	txArg := db.CreateScheduleTxParams{Schedule: arg}
+
+	if req.TaskId == nil && (req.Type == "task" || req.Type == "exam") {
+		txArg.Task = &db.CreateTaskParams{
+			UserID:      user.ID,
+			SubjectID:   subject.ID,
+			Title:       req.Title,
+			Description: pgtype.Text{String: req.Description, Valid: true},
+			Deadline:    pgtype.Timestamptz{Time: eventDate, Valid: true},
+		}
+	}
+
+	res, err := server.store.CreateScheduleTx(ctx, txArg)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, errResponse(errors.New("Cannot create schedule")))
 		return
 	}
 
-	result := formatedScheduleResponse(schedule)
-
-	ctx.JSON(http.StatusOK, result)
+	ctx.JSON(http.StatusOK, formatedScheduleResponse(res.Schedule))
 }
 
 func (server *Server) getScheduleById(ctx *gin.Context) {

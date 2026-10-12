@@ -4,6 +4,7 @@ export interface ScheduleRequest {
     subject_id: number;
     task_id?: number | null;
     title: string;
+    description?: string;
     event_date: string;
     reminder: boolean;
     type: string;
