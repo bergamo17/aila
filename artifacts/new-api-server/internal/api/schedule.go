@@ -608,23 +608,51 @@ func (server *Server) updateScheduleStatus(ctx *gin.Context) {
 		return
 	}
 
-	args := db.UpdateScheduleStatusParams{
-		ID:          uri.Id,
-		UserID:      user.ID,
-		IsCompleted: *req.IsCompleted,
-	}
-
-	updated, err := server.store.UpdateScheduleStatus(ctx, args)
+	schedule, err := server.store.GetScheduleById(ctx, db.GetScheduleByIdParams{
+		ID:     uri.Id,
+		UserID: user.ID,
+	})
 	if err != nil {
 		if err == pgx.ErrNoRows {
-			ctx.JSON(http.StatusNotFound, errResponse(errors.New("Schedule not found")))
+			ctx.JSON(http.StatusNotFound, errResponse(errors.New("Scheduled event not founded")))
 			return
 		}
 		ctx.JSON(http.StatusInternalServerError, errResponse(err))
 		return
 	}
 
-	result := formatedScheduleResponse(updated)
+	args := db.UpdateScheduleStatusParams{
+		ID:          uri.Id,
+		UserID:      user.ID,
+		IsCompleted: *req.IsCompleted,
+	}
+
+	txArg := db.UpdateScheduleStatusTxParams{Schedule: args}
+
+	if schedule.TaskID.Valid && (schedule.Type == "task" || schedule.Type == "exam") {
+		switch *req.IsCompleted {
+		case true:
+			txArg.Task = &db.UpdateTaskStatusParams{
+				ID:         schedule.TaskID.Int64,
+				UserID:     schedule.UserID,
+				TaskStatus: "done",
+			}
+		case false:
+			txArg.Task = &db.UpdateTaskStatusParams{
+				ID:     schedule.TaskID.Int64,
+				UserID: schedule.UserID,
+				// TaskStatus: "to do",
+			}
+		}
+	}
+
+	updated, err := server.store.UpdateScheduleStatusTx(ctx, txArg)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, errResponse(err))
+		return
+	}
+
+	result := formatedScheduleResponse(updated.Schedule)
 
 	ctx.JSON(http.StatusOK, result)
 }

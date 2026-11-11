@@ -50,6 +50,20 @@ type updateOnlyStatusRequest struct {
 	TaskStatus string `json:"task_status" binding:"required,oneof='to do' 'in progress' 'done'"`
 }
 
+func formatedTaskResponse(s db.Task) taskResponse {
+	return taskResponse{
+		Id:          s.ID,
+		SubjectId:   s.SubjectID,
+		Title:       s.Title,
+		TaskStatus:  s.TaskStatus,
+		Position:    s.Position,
+		Description: s.Description.String,
+		Deadline:    &s.Deadline.Time,
+		CreatedAt:   s.CreatedAt.Time,
+		UpdatedAt:   s.UpdatedAt.Time,
+	}
+}
+
 func (server *Server) createTask(ctx *gin.Context) {
 	var req createTaskRequest
 
@@ -334,23 +348,15 @@ func (server *Server) updateTaskStatusAndPosition(ctx *gin.Context) {
 		TaskStatus: req.TaskStatus,
 	}
 
-	updatedTask, err := server.store.UpdateTaskPosition(ctx, arg)
+	txArg := db.UpdateTaskStatusTxParams{Task: arg}
+
+	updatedTask, err := server.store.UpdateTaskStatusTx(ctx, txArg)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, errResponse(err))
 		return
 	}
 
-	result := &taskResponse{
-		Id:          updatedTask.ID,
-		SubjectId:   updatedTask.SubjectID,
-		Title:       updatedTask.Title,
-		TaskStatus:  updatedTask.TaskStatus,
-		Position:    updatedTask.Position,
-		Description: updatedTask.Description.String,
-		Deadline:    &updatedTask.Deadline.Time,
-		CreatedAt:   updatedTask.CreatedAt.Time,
-		UpdatedAt:   updatedTask.UpdatedAt.Time,
-	}
+	result := formatedTaskResponse(updatedTask.Task)
 
 	ctx.JSON(http.StatusOK, result)
 }

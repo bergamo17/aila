@@ -11,6 +11,9 @@ type Store interface {
 	Querier
 	CreateScheduleTx(ctx context.Context, arg CreateScheduleTxParams) (ScheduleTxResult, error)
 	DeleteScheduleTx(ctx context.Context, arg DeleteScheduleTxParams) error
+	UpdateScheduleStatusTx(ctx context.Context, arg UpdateScheduleStatusTxParams) (ScheduleTxResult, error)
+	CreateTaskTx(ctx context.Context, arg CreateTaskTxParams) (TaskTxResult, error)
+	UpdateTaskStatusTx(ctx context.Context, arg UpdateTaskStatusTxParams) (TaskTxResult, error)
 }
 
 type SQLStore struct {
