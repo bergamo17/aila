@@ -7,6 +7,7 @@ import (
 
 	db "github.com/bergamo17/aila/db/sqlc"
 	"github.com/bergamo17/aila/internal/token"
+	"github.com/bergamo17/aila/internal/util"
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
@@ -58,7 +59,7 @@ func formatedTaskResponse(s db.Task) taskResponse {
 		TaskStatus:  s.TaskStatus,
 		Position:    s.Position,
 		Description: s.Description.String,
-		Deadline:    &s.Deadline.Time,
+		Deadline:    util.NullableTime(s.Deadline),
 		CreatedAt:   s.CreatedAt.Time,
 		UpdatedAt:   s.UpdatedAt.Time,
 	}
@@ -103,25 +104,33 @@ func (server *Server) createTask(ctx *gin.Context) {
 		Deadline:    pgtype.Timestamptz{Time: *req.Deadline, Valid: true},
 	}
 
-	task, err := server.store.CreateTask(ctx, arg)
+	if req.Deadline != nil {
+		arg.Deadline = pgtype.Timestamptz{Time: *req.Deadline, Valid: true}
+	}
+
+	txArg := db.CreateTaskTxParams{Task: arg}
+
+	if arg.Deadline.Valid {
+		wib := time.FixedZone("WIB", 7*60*60)
+		txArg.Schedule = &db.CreateScheduleParams{
+			UserID:    arg.UserID,
+			SubjectID: arg.SubjectID,
+			Title:     arg.Title,
+			EventDate: pgtype.Date{Time: arg.Deadline.Time.In(wib), Valid: true},
+			Reminder:  pgtype.Bool{Bool: true, Valid: true},
+			Type:      "task",
+		}
+	}
+
+	task, err := server.store.CreateTaskTx(ctx, txArg)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, errResponse(err))
 		return
 	}
 
-	result := &taskResponse{
-		Id:          task.ID,
-		SubjectId:   task.SubjectID,
-		Title:       task.Title,
-		TaskStatus:  task.TaskStatus,
-		Position:    task.Position,
-		Description: task.Description.String,
-		Deadline:    &task.Deadline.Time,
-		CreatedAt:   task.CreatedAt.Time,
-		UpdatedAt:   task.UpdatedAt.Time,
-	}
+	txArg.Schedule.TaskID = task.Schedule.TaskID
 
-	ctx.JSON(http.StatusOK, result)
+	ctx.JSON(http.StatusOK, formatedTaskResponse(task.Task))
 }
 
 func (server *Server) getTask(ctx *gin.Context) {

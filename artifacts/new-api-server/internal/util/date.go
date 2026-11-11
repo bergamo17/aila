@@ -17,3 +17,10 @@ func ParseDate(s *string) (pgtype.Date, error) {
 	}
 	return pgtype.Date{Time: d, Valid: true}, nil
 }
+
+func NullableTime(t pgtype.Timestamptz) *time.Time {
+	if !t.Valid {
+		return nil
+	}
+	return &t.Time
+}

@@ -151,6 +151,11 @@ function TaskDetailDialog({ task, onClose }: { task: Task | null; onClose: () =>
                 <p className="text-sm text-muted-foreground whitespace-pre-wrap">
                     {task?.description || 'Tidak ada deskripsi.'}
                 </p>
+                <p className='text-ts text-muted-foreground'>
+                    Deadline: {task?.deadline
+                        ? format(new Date(task.deadline), 'd MMMM yyyy', { locale: localeId })
+                        : "Tidak ada deadline"}
+                </p>
                 <DialogFooter>
                     <Button
                         variant="destructive"

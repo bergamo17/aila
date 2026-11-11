@@ -13,6 +13,7 @@ export interface Task {
     status: TaskStatus;
     position: number;
     description: string;
+    deadline: string | null;
     createdAt: string;
     updatedAt: string;
 }
@@ -37,6 +38,7 @@ function mapTaskFromApi(raw: any): Task {
         status: STATUS_FROM_BACKEND[raw.task_status] ?? 'todo',
         position: raw.position,
         description: raw.description ?? '',
+        deadline: raw.deadline ?? null,
         createdAt: raw.created_at,
         updatedAt: raw.updated_at,
     };
